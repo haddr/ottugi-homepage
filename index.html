@@ -5383,18 +5383,53 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 // ============================================================
-// 로그인 / 회원가입 시스템
+// 로그인 / 회원가입 시스템 (Firebase Authentication)
+// ------------------------------------------------------------
+// - 계정은 Firebase Auth 서버에 저장됩니다 (비밀번호는 Firebase가 해시 처리).
+// - 관리자: ADMIN_EMAIL 로 가입/로그인한 계정이 관리자가 됩니다.
+//   ※ 최초 1회, 관리자 이메일로 직접 회원가입하여 계정을 만들어야 합니다.
+// - Firebase 콘솔 > Authentication > Sign-in method 에서
+//   "이메일/비밀번호" 공급자를 반드시 사용 설정해야 합니다.
 // ============================================================
-var ADMIN_EMAIL = "6738337@hanmail.net"; var ADMIN_PW    = "dhenrl1419!";
-var USERS_KEY   = "ottuki_users";
-var SESSION_KEY = "ottuki_session";
+var ADMIN_EMAIL = "6738337@hanmail.net";
 var isAdmin = false;
 var currentUser = null;
 
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch(e) { return []; }
+function _authAvailable() {
+  return (typeof firebase !== "undefined") && !!firebase.auth;
 }
-function saveUsers(u) { localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
+
+function _authErrMsg(e) {
+  var c = (e && e.code) || "";
+  if (c === "auth/invalid-credential" || c === "auth/wrong-password" || c === "auth/user-not-found")
+    return "이메일 또는 비밀번호가 일치하지 않습니다.";
+  if (c === "auth/invalid-email") return "이메일 형식이 올바르지 않습니다.";
+  if (c === "auth/email-already-in-use") return "이미 가입된 이메일입니다.";
+  if (c === "auth/weak-password") return "비밀번호는 8자 이상이어야 합니다.";
+  if (c === "auth/too-many-requests") return "시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요.";
+  if (c === "auth/network-request-failed") return "네트워크 오류입니다. 인터넷 연결을 확인해 주세요.";
+  if (c === "auth/operation-not-allowed") return "이메일/비밀번호 로그인이 꺼져 있습니다. Firebase 콘솔 > Authentication에서 사용 설정해 주세요.";
+  return "오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+}
+
+// 로그인 상태 변화 → 화면 반영 (initCloud의 onAuthStateChanged에서 호출)
+function _applyAuthUser(user) {
+  if (user) {
+    isAdmin = (user.email || "").toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    currentUser = {
+      name: user.displayName || (isAdmin ? "관리자" : (user.email || "").split("@")[0]),
+      email: user.email,
+      isAdmin: isAdmin
+    };
+  } else {
+    isAdmin = false;
+    currentUser = null;
+  }
+  applyLoginUI();
+  try { renderNoticePage(); } catch(e) {}
+  try { renderInquiryPage(); } catch(e) {}
+  try { if (typeof renderOrgPage === "function") renderOrgPage(); } catch(e) {}
+}
 
 function openAuthModal(tab) {
   document.getElementById("auth-overlay").classList.add("open");
@@ -5416,29 +5451,20 @@ function submitLogin() {
   var pw    = document.getElementById("login-pw").value;
   var errEl = document.getElementById("login-error");
   if (!email || !pw) { errEl.textContent="이메일과 비밀번호를 입력해 주세요."; errEl.classList.add("show"); return; }
-
-  // 관리자 확인
-  if (email === ADMIN_EMAIL.toLowerCase() && pw === ADMIN_PW) {
-    isAdmin = true;
-    currentUser = { name:"관리자", email: ADMIN_EMAIL, isAdmin: true };
-    saveSession();
-    applyLoginUI();
-    closeAuthModal();
-    renderNoticePage(); renderInquiryPage(); renderOrgPage();
+  if (!_authAvailable()) {
+    errEl.textContent = "로그인 서버에 연결 중입니다. 인터넷 연결을 확인한 뒤 잠시 후 다시 시도해 주세요.";
+    errEl.classList.add("show");
     return;
   }
-
-  // 일반 회원 확인
-  var users = getUsers();
-  var found = users.find(function(u){ return u.email.toLowerCase()===email && u.pw===pw; });
-  if (!found) { errEl.textContent="이메일 또는 비밀번호가 일치하지 않습니다."; errEl.classList.add("show"); return; }
-
-  isAdmin = false;
-  currentUser = { name: found.name, email: found.email, isAdmin: false };
-  saveSession();
-  applyLoginUI();
-  closeAuthModal();
-  renderNoticePage(); renderInquiryPage();
+  firebase.auth().signInWithEmailAndPassword(email, pw)
+    .then(function() {
+      // 화면 반영은 onAuthStateChanged(_applyAuthUser)가 처리
+      closeAuthModal();
+    })
+    .catch(function(e) {
+      errEl.textContent = _authErrMsg(e);
+      errEl.classList.add("show");
+    });
 }
 
 function submitSignup() {
@@ -5456,36 +5482,48 @@ function submitSignup() {
   if (pw.length < 8) { errEl.textContent="비밀번호는 8자 이상이어야 합니다."; errEl.classList.add("show"); return; }
   if (pw !== pw2) { errEl.textContent="비밀번호가 일치하지 않습니다."; errEl.classList.add("show"); return; }
   if (!/^\d{6}$/.test(birth)) { errEl.textContent="주민등록번호 앞 6자리를 숫자로 입력해 주세요."; errEl.classList.add("show"); return; }
-
-  var users = getUsers();
-  if (email === ADMIN_EMAIL.toLowerCase()) { errEl.textContent="사용할 수 없는 이메일입니다."; errEl.classList.add("show"); return; }
-  if (users.find(function(u){ return u.email.toLowerCase()===email; })) {
-    errEl.textContent="이미 가입된 이메일입니다."; errEl.classList.add("show"); return;
+  if (!_authAvailable()) {
+    errEl.textContent = "가입 서버에 연결 중입니다. 인터넷 연결을 확인한 뒤 잠시 후 다시 시도해 주세요.";
+    errEl.classList.add("show");
+    return;
   }
 
-  users.push({ name:name, email:email, pw:pw, phone:phone, birth:birth, gender:gender, joinDate: new Date().toLocaleDateString("ko-KR") });
-  saveUsers(users);
-  switchAuthForm("done");
+  firebase.auth().createUserWithEmailAndPassword(email, pw)
+    .then(function(cred) {
+      var jobs = [];
+      // 표시 이름 설정
+      jobs.push(cred.user.updateProfile({ displayName: name }).catch(function(){}));
+      // 부가정보(전화/생년월일/성별)는 Firestore users 컬렉션에 저장 (비밀번호는 저장 안 함)
+      if (_cloudDb) {
+        jobs.push(
+          _cloudDb.collection("users").doc(cred.user.uid).set({
+            name: name, email: email, phone: phone, birth: birth, gender: gender,
+            joinDate: new Date().toLocaleDateString("ko-KR")
+          }).catch(function(e){ cloudLog("회원 정보 저장 실패: " + e.message); })
+        );
+      }
+      return Promise.all(jobs).then(function() {
+        // displayName 반영해 UI 갱신
+        _applyAuthUser(firebase.auth().currentUser);
+        switchAuthForm("done");
+      });
+    })
+    .catch(function(e) {
+      errEl.textContent = _authErrMsg(e);
+      errEl.classList.add("show");
+    });
 }
 
-function saveSession() {
-  try { localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser)); } catch(e) {}
-}
-function loadSession() {
-  try {
-    var s = JSON.parse(localStorage.getItem(SESSION_KEY));
-    if (!s) return;
-    currentUser = s;
-    isAdmin = s.isAdmin || false;
-    applyLoginUI();
-  } catch(e) {}
-}
+// 세션은 Firebase Auth가 자동 관리 (새로고침해도 로그인 유지)
+function loadSession() { /* onAuthStateChanged가 대신 처리 — 호환용 빈 함수 */ }
+
 function doLogout() {
-  isAdmin = false;
-  currentUser = null;
-  try { localStorage.removeItem(SESSION_KEY); } catch(e) {}
-  applyLoginUI();
-  renderNoticePage(); renderInquiryPage(); renderOrgPage();
+  if (_authAvailable()) {
+    firebase.auth().signOut().catch(function(){});
+    // 화면 반영은 onAuthStateChanged(_applyAuthUser)가 처리
+  } else {
+    _applyAuthUser(null);
+  }
 }
 function applyLoginUI() {
   var authArea = document.getElementById("top-auth-area");
@@ -6351,7 +6389,8 @@ function cloudLog(msg) { try { console.log("[클라우드] " + msg); } catch(e){
 function loadFirebaseSDK(cb) {
   var urls = [
     "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js",
-    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js",
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"
   ];
   var loaded = 0;
   urls.forEach(function(u) {
@@ -6449,6 +6488,10 @@ localStorage.removeItem = function(key) {
       _cloudDb = firebase.firestore();
       _cloudReady = true;
       cloudLog("연결됨 — 데이터 동기화 시작");
+      // 로그인 상태 감시 (새로고침해도 세션 유지, 다른 기기에서도 동일 계정 사용)
+      try {
+        firebase.auth().onAuthStateChanged(function(u) { _applyAuthUser(u); });
+      } catch(e) { cloudLog("Auth 초기화 실패: " + e.message); }
       cloudPullAll();
     } catch(e) {
       cloudLog("초기화 실패: " + e.message);
