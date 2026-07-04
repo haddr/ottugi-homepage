@@ -338,6 +338,14 @@ footer{background:#2c3e50;color:#b8c2cc;padding:40px 20px 20px;margin-top:40px}
 .board-date-cell{font-size:12px;color:#94a3b8;min-width:76px;text-align:right}
 .board-body{max-height:0;overflow:hidden;transition:max-height .35s ease;background:#fafbfc;border-top:1px solid transparent}
 .board-body.open{max-height:2000px;border-top:1px solid #f1f5f9}
+/* 공지 상세 뷰 */
+.notice-detail-card{background:#fff;border:1px solid #eef2f7;border-radius:16px;padding:36px 40px;box-shadow:0 4px 20px rgba(0,0,0,.05);}
+.notice-detail-head{border-bottom:2px solid #f1f5f9;padding-bottom:20px;margin-bottom:24px;}
+.notice-detail-head h2{font-size:24px;font-weight:800;color:#1a2d4a;margin:0 0 12px;line-height:1.4;word-break:keep-all;}
+.notice-detail-meta{display:flex;align-items:center;gap:14px;font-size:13.5px;color:#8a96a3;}
+.notice-detail-meta .nd-sep{display:flex;gap:6px;}
+.notice-detail-body{font-size:15.5px;line-height:1.9;color:#333;word-break:keep-all;white-space:pre-line;}
+@media(max-width:600px){.notice-detail-card{padding:24px 20px;}.notice-detail-head h2{font-size:20px;}}
 .board-body-inner{padding:20px 24px;font-size:14px;color:#374151;line-height:1.8}
 .board-body-meta{font-size:12px;color:#64748b;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #e9ecef}
 .pwd-prompt{display:flex;gap:8px;align-items:center;padding:8px 0}
@@ -1002,6 +1010,8 @@ footer{background:#2c3e50;color:#b8c2cc;padding:40px 20px 20px;margin-top:40px}
 /* 글자 크기 단계 (body 줌) */
 html.fs-1{font-size:17px;}
 html.fs-2{font-size:19px;}
+html.fs-1 body{zoom:1.08;}
+html.fs-2 body{zoom:1.16;}
 
 
 /* ── 연혁 페이지 ── */
@@ -1063,6 +1073,47 @@ html.fs-2{font-size:19px;}
   .form-dl-box{padding:20px;}
   .form-dl-btn{width:100%;justify-content:center;}
 }
+
+
+/* ── 관리자 인라인 편집 ── */
+[data-content].editable-on{position:relative;outline:2px dashed #4F8EF7;outline-offset:4px;border-radius:6px;transition:background .15s;cursor:default;}
+[data-content].editable-on:hover{background:rgba(79,142,247,.06);}
+.edit-pencil{
+  position:absolute;top:-12px;right:-12px;z-index:50;
+  width:30px;height:30px;border-radius:50%;
+  background:#4F8EF7;color:#fff;border:2px solid #fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;cursor:pointer;box-shadow:0 2px 8px rgba(79,142,247,.5);
+}
+.edit-pencil:hover{background:#3a7be0;}
+#edit-modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;align-items:center;justify-content:center;padding:20px;}
+#edit-modal-ov.open{display:flex;}
+#edit-modal{background:#fff;border-radius:16px;width:680px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+#edit-modal h3{font-size:17px;font-weight:800;color:#1a2d4a;padding:20px 24px;border-bottom:1px solid #eee;margin:0;display:flex;justify-content:space-between;align-items:center;}
+#edit-modal h3 .lang-tag{font-size:12px;font-weight:600;color:#4F8EF7;background:#EEF5FF;padding:3px 10px;border-radius:10px;}
+#edit-modal-body{padding:20px 24px;overflow-y:auto;flex:1;}
+#edit-textarea{width:100%;min-height:240px;border:1.5px solid #dbe8f8;border-radius:10px;padding:14px;font-size:14px;font-family:inherit;line-height:1.7;resize:vertical;box-sizing:border-box;}
+#edit-hint{font-size:12px;color:#999;margin-top:8px;}
+#edit-modal-foot{padding:16px 24px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;}
+.em-btn{border:none;border-radius:9px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+.em-save{background:#4F8EF7;color:#fff;}
+.em-save:hover{background:#3a7be0;}
+.em-cancel{background:#f0f0f0;color:#555;}
+#edit-mode-toggle{
+  position:fixed;bottom:84px;right:28px;z-index:9000;
+  background:#1a2d4a;color:#fff;border:none;border-radius:50px;
+  padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;
+  font-family:inherit;box-shadow:0 4px 16px rgba(26,45,74,.4);
+  display:none;align-items:center;gap:7px;
+}
+#edit-mode-toggle.show{display:flex;}
+#edit-mode-toggle.active{background:#4F8EF7;}
+
+
+/* 메뉴 편집 연필 위치 보정 */
+.nav-inner [data-i18n].editable-on{outline-offset:-2px;}
+.nav-inner .edit-pencil{top:50%;right:2px;transform:translateY(-50%);width:22px;height:22px;font-size:11px;}
+.submenu [data-i18n].editable-on{display:flex !important;align-items:center;}
 
 </style>
 </head>
@@ -1881,6 +1932,11 @@ html.fs-2{font-size:19px;}
       <label data-i18n="lbl_content">내용</label>
       <textarea id="notice-content-input" data-i18n-placeholder="notice_content_ph" placeholder="공지 내용을 입력하세요"></textarea>
     </div>
+    <div class="form-row">
+      <label data-i18n="date">날짜</label>
+      <input type="date" id="notice-date-input" style="max-width:200px;">
+      <span style="font-size:12px;color:#8a96a3;margin-left:8px;">※ 비워두면 오늘 날짜로 등록됩니다</span>
+    </div>
     <div class="form-actions">
       <button class="btn-submit" onclick="addNotice()" data-i18n="btn_register">등록</button>
     </div>
@@ -1888,13 +1944,34 @@ html.fs-2{font-size:19px;}
 
   <!-- 공지 목록 -->
   <div class="board-wrap">
-    <div class="board-header-row">
-      <span data-i18n="col_num">번호</span><span data-i18n="col_title">제목</span><span data-i18n="col_date">날짜</span><span></span>
+    <div id="notice-list-wrap">
+      <div class="board-header-row">
+        <span data-i18n="col_num">번호</span><span data-i18n="col_title">제목</span><span data-i18n="col_date">날짜</span><span></span>
+      </div>
+      <div id="notice-list-container"></div>
     </div>
-    <div id="notice-list-container"></div>
+
+    <!-- 공지 상세 뷰 (클릭 시 목록 대신 표시) -->
+    <div id="notice-detail-view" style="display:none;">
+      <button class="btn-sm btn-gray" onclick="closeNoticeDetail()" style="margin-bottom:18px;">← 목록으로</button>
+      <div class="notice-detail-card">
+        <div class="notice-detail-head">
+          <h2 id="nd-title"></h2>
+          <div class="notice-detail-meta">
+            <span id="nd-date"></span>
+            <button class="btn-sm btn-gray" id="nd-date-edit-btn" style="display:none;font-size:11px;padding:2px 9px;" onclick="editNoticeDateFromDetail()">📅 날짜수정</button>
+            <span class="nd-sep" id="nd-admin-actions" style="display:none;">
+              <button class="btn-sm btn-gray" onclick="editNoticeFromDetail()">수정</button>
+              <button class="btn-sm btn-red" onclick="deleteNoticeFromDetail()">삭제</button>
+            </span>
+          </div>
+        </div>
+        <div class="notice-detail-body" id="nd-content"></div>
+      </div>
+    </div>
   </div>
 </div>
-</div>
+</div><!-- /page-notice -->
 
 <!-- ============================================================
      PAGE: 문의하기
@@ -2089,7 +2166,7 @@ html.fs-2{font-size:19px;}
     <section class="chart" aria-label="조직도">
       <!-- 시설장 -->
       <div class="director">
-        <div class="role" data-i18n-html="org_director_role">시설장 : <span class="name">손 영 민</span></div>
+        <div class="role" data-i18n-html="org_director_role">시설장 : <span class="name" data-content="org_name_director">손 영 민</span></div>
         <div class="sub" data-i18n-html="org_director_sub">(센터 운영계획 &amp; 사업행정 총괄)</div>
       </div>
 
@@ -2104,19 +2181,19 @@ html.fs-2{font-size:19px;}
           </div>
           <div class="person staff">
             <div class="role" data-i18n-html="org_role_team_lead">팀 &nbsp;장</div>
-            <div class="name">박 성 준</div>
+            <div class="name" data-content="org_name_t1_lead">박 성 준</div>
           </div>
           <div class="person staff">
             <div class="role" data-i18n="org_role_sw">사원 (사회복지사)</div>
-            <div class="name">김 세 륜</div>
+            <div class="name" data-content="org_name_t1_staff1">김 세 륜</div>
           </div>
           <div class="person staff">
             <div class="role" data-i18n="org_role_sw">사원 (사회복지사)</div>
-            <div class="name">정 은 지</div>
+            <div class="name" data-content="org_name_t1_staff2">정 은 지</div>
           </div>
           <div class="person staff">
             <div class="role" data-i18n="org_role_sw">사원 (사회복지사)</div>
-            <div class="name">이 예 지</div>
+            <div class="name" data-content="org_name_t1_staff3">이 예 지</div>
           </div>
         </div>
 
@@ -2128,19 +2205,19 @@ html.fs-2{font-size:19px;}
           </div>
           <div class="person staff">
             <div class="role" data-i18n-html="org_role_manager">과 &nbsp;장</div>
-            <div class="name">김 시 현</div>
+            <div class="name" data-content="org_name_t2_manager">김 시 현</div>
           </div>
           <div class="person staff">
             <div class="role" data-i18n-html="org_role_chief">주 &nbsp;임</div>
-            <div class="name">송 승 희</div>
+            <div class="name" data-content="org_name_t2_chief">송 승 희</div>
           </div>
           <div class="person staff">
             <div class="role" data-i18n="org_role_sw">사원 (사회복지사)</div>
-            <div class="name">지 소 연</div>
+            <div class="name" data-content="org_name_t2_staff1">지 소 연</div>
           </div>
           <div class="person staff">
             <div class="role" data-i18n="org_role_driver">사원 (차량담당)</div>
-            <div class="name">윤 래 한</div>
+            <div class="name" data-content="org_name_t2_staff2">윤 래 한</div>
           </div>
         </div>
       </div>
@@ -2158,8 +2235,8 @@ html.fs-2{font-size:19px;}
         </thead>
         <tbody>
           <tr>
-            <td>22</td><td>1</td><td>1</td><td>1</td>
-            <td>1</td><td>4</td><td>1</td><td>13</td>
+            <td data-content="org_stat_total">22</td><td data-content="org_stat_v_director">1</td><td data-content="org_stat_v_manager">1</td><td data-content="org_stat_v_team_lead">1</td>
+            <td data-content="org_stat_v_chief">1</td><td data-content="org_stat_v_sw">4</td><td data-content="org_stat_v_driver">1</td><td data-content="org_stat_v_provider">13</td>
           </tr>
         </tbody>
       </table>
@@ -3803,6 +3880,23 @@ var translations = {
 
 var pageContent = {
   ko: {
+    org_name_director: `손 영 민`,
+    org_name_t1_lead: `박 성 준`,
+    org_name_t1_staff1: `김 세 륜`,
+    org_name_t1_staff2: `정 은 지`,
+    org_name_t1_staff3: `이 예 지`,
+    org_name_t2_manager: `김 시 현`,
+    org_name_t2_chief: `송 승 희`,
+    org_name_t2_staff1: `지 소 연`,
+    org_name_t2_staff2: `윤 래 한`,
+    org_stat_total: `22`,
+    org_stat_v_director: `1`,
+    org_stat_v_manager: `1`,
+    org_stat_v_team_lead: `1`,
+    org_stat_v_chief: `1`,
+    org_stat_v_sw: `4`,
+    org_stat_v_driver: `1`,
+    org_stat_v_provider: `13`,
     svc_title_rehab: `발달재활서비스 <small style="font-size:15px;font-weight:500;color:rgba(255,255,255,.9)">(국가바우처)</small>`,
     svc_body_rehab: `<div class="info-grid">
         <div class="info-block full">
@@ -4706,6 +4800,12 @@ function showPage(page) {
   } else if (page === "notice") {
     document.getElementById("page-notice").classList.add("active");
     document.getElementById("nav-notice").classList.add("active");
+    var ndv = document.getElementById("notice-detail-view");
+    if (ndv) ndv.style.display = "none";
+    var nlw = document.getElementById("notice-list-wrap");
+    if (nlw) nlw.style.display = "";
+    var ntb = document.querySelector("#page-notice .board-top-bar");
+    if (ntb) ntb.style.display = "";
     renderNoticePage();
   } else if (page === "contact") {
     document.getElementById("page-contact").classList.add("active");
@@ -4821,13 +4921,35 @@ function initPasteHandler() {
 function addPendingFiles(files) {
   Array.from(files).forEach(function(file) {
     if (!file || !file.type.startsWith("image/")) return;
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      _pendingPhotos.push(e.target.result);
+    compressImage(file, 1280, 0.72, function(dataUrl) {
+      _pendingPhotos.push(dataUrl);
       renderPendingStrip();
-    };
-    reader.readAsDataURL(file);
+    });
   });
+}
+
+// 이미지 압축: 최대 너비 maxW, 품질 quality → dataURL 콜백
+function compressImage(file, maxW, quality, cb) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      var canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      try {
+        cb(canvas.toDataURL("image/jpeg", quality));
+      } catch (err) {
+        cb(e.target.result); // 실패 시 원본
+      }
+    };
+    img.onerror = function() { cb(e.target.result); };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function renderPendingStrip() {
@@ -5263,8 +5385,7 @@ document.addEventListener("DOMContentLoaded", function() {
 // ============================================================
 // 로그인 / 회원가입 시스템
 // ============================================================
-var ADMIN_EMAIL = "6738337@daum.net";
-var ADMIN_PW    = "dhenrl1419!";
+var ADMIN_EMAIL = "6738337@hanmail.net"; var ADMIN_PW    = "dhenrl1419!";
 var USERS_KEY   = "ottuki_users";
 var SESSION_KEY = "ottuki_session";
 var isAdmin = false;
@@ -5383,6 +5504,12 @@ function applyLoginUI() {
   // 사진 관리 버튼: 관리자만 표시
   var imgMgrBtn = document.getElementById("img-mgr-btn");
   if (imgMgrBtn) imgMgrBtn.style.display = isAdmin ? "flex" : "none";
+  // 텍스트 편집 버튼: 관리자만 표시
+  var editToggle = document.getElementById("edit-mode-toggle");
+  if (editToggle) {
+    editToggle.classList.toggle("show", isAdmin);
+    if (!isAdmin && typeof _editMode !== "undefined" && _editMode) { _editMode = false; toggleEditMode(); }
+  }
 }
 
 
@@ -5443,7 +5570,11 @@ function renderHomeNotices() {
   var list = document.getElementById("home-notice-list");
   if (!list) return;
   var notices = getNotices();
-  var latest = notices.slice().reverse().slice(0, 5);
+  var latest = notices.slice().sort(function(a, b) {
+    var da = (a.date || "").replace(/\./g, ""), db = (b.date || "").replace(/\./g, "");
+    if (da !== db) return db.localeCompare(da);
+    return (b.id || 0) - (a.id || 0);
+  }).slice(0, 5);
   if (latest.length === 0) {
     list.innerHTML = "<li style='padding:20px;text-align:center;color:#aaa'>등록된 공지가 없습니다.</li>";
     return;
@@ -5463,27 +5594,32 @@ function renderNoticePage() {
   var writeBox = document.getElementById("notice-write-box");
   if (badge) badge.style.display = isAdmin ? "inline-block" : "none";
   if (logoutBtn) logoutBtn.style.display = isAdmin ? "inline-block" : "none";
-  if (writeBox) { if (isAdmin) writeBox.classList.add("show"); else writeBox.classList.remove("show"); }
+  if (writeBox) { writeBox.style.display = ""; if (isAdmin) writeBox.classList.add("show"); else writeBox.classList.remove("show"); }
 
   var container = document.getElementById("notice-list-container");
   if (!container) return;
-  var notices = getNotices().slice().reverse();
+  // 날짜 내림차순 정렬 (최신이 위로). 같은 날짜면 id(작성순) 역순
+  var notices = getNotices().slice().sort(function(a, b) {
+    var da = (a.date || "").replace(/\./g, ""), db = (b.date || "").replace(/\./g, "");
+    if (da !== db) return db.localeCompare(da);
+    return (b.id || 0) - (a.id || 0);
+  });
 
   if (notices.length === 0) {
     container.innerHTML = "<p class=\"empty-msg\">등록된 공지사항이 없습니다.</p>";
     return;
   }
   container.innerHTML = notices.map(function(n, i) {
-    var delBtn = isAdmin ? "<button class=\"btn-sm btn-red\" style=\"font-size:11px;padding:3px 9px\" onclick=\"deleteNotice(" + n.id + ");event.stopPropagation()\">삭제</button>" : "<span></span>";
+    var adminBtns = isAdmin
+      ? "<button class=\"btn-sm btn-gray\" style=\"font-size:11px;padding:3px 9px;margin-right:4px\" onclick=\"editNotice(" + n.id + ");event.stopPropagation()\">수정</button>" +
+        "<button class=\"btn-sm btn-red\" style=\"font-size:11px;padding:3px 9px\" onclick=\"deleteNotice(" + n.id + ");event.stopPropagation()\">삭제</button>"
+      : "<span></span>";
     return "<div class=\"board-item\">" +
-      "<div class=\"board-row\" onclick=\"toggleBoard(this)\">" +
+      "<div class=\"board-row\" onclick=\"openNoticeDetail(" + n.id + ")\">" +
         "<span class=\"board-num\">" + (notices.length - i) + "</span>" +
         "<span class=\"board-title-cell\"><span class=\"board-title-text\">" + esc(n.title) + "</span></span>" +
         "<span class=\"board-date-cell\">" + esc(n.date) + "</span>" +
-        delBtn +
-      "</div>" +
-      "<div class=\"board-body\">" +
-        "<div class=\"board-body-inner\">" + esc(n.content).replace(/\n/g,"<br>") + "</div>" +
+        adminBtns +
       "</div>" +
     "</div>";
   }).join("");
@@ -5517,7 +5653,13 @@ function renderInquiryPage(page) {
   var pagination = document.getElementById("inq-pagination");
   if (!container) return;
 
-  var inquiries = getInquiries().slice().reverse();
+  var inquiries = getInquiries().slice().sort(function(a, b) {
+    // 날짜 최신순 (내림차순), 같은 날짜면 id 큰 것(나중 등록)이 위로
+    var da = (a.date || "").replace(/[^0-9]/g, "");
+    var db = (b.date || "").replace(/[^0-9]/g, "");
+    if (da !== db) return db < da ? -1 : 1;
+    return b.id - a.id;
+  });
   var total = inquiries.length;
 
   if (total === 0) {
@@ -5538,12 +5680,16 @@ function renderInquiryPage(page) {
     var titleText = (isPrivate && !isAdmin) ? "비밀글입니다." : esc(n.title);
     var repliedBadge = (n.reply && n.reply.text) ? "<span class=\"inq-replied-badge\">답변완료</span>" : "";
     var num = total - (start + i);
+    var delBtn = isAdmin
+      ? "<button class=\"btn-sm btn-red\" style=\"font-size:11px;padding:3px 9px;flex-shrink:0;\" onclick=\"deleteInquiryFromList(" + n.id + ");event.stopPropagation()\">삭제</button>"
+      : "";
     return "<div class=\"board-item\">" +
       "<div class=\"inq-name-row\" onclick=\"openInquiryDetail(" + n.id + ")\">" +
         "<span class=\"board-num\">" + num + "</span>" +
         "<span class=\"board-name-cell\">" + esc(n.name) + "</span>" +
         "<span class=\"board-title-cell\">" + lockIcon + "<span class=\"board-title-text\">" + titleText + "</span>" + repliedBadge + "</span>" +
         "<span class=\"board-date-cell\">" + esc(n.date) + "</span>" +
+        delBtn +
       "</div>" +
     "</div>";
   }).join("");
@@ -5702,19 +5848,145 @@ function deleteAdminReply(id) {
 // ============================================================
 // ADD / DELETE
 // ============================================================
+// 게시판 항목 클릭 시 본문 펼치기/접기
+function toggleBoard(rowEl) {
+  var item = rowEl.closest ? rowEl.closest(".board-item") : rowEl.parentNode;
+  if (!item) return;
+  var body = item.querySelector(".board-body");
+  if (!body) return;
+  var isOpen = body.classList.contains("open");
+  // 같은 목록 내 다른 항목 닫기 (아코디언). 여러 개 동시에 열고 싶으면 이 블록 제거
+  var container = item.parentNode;
+  if (container) {
+    container.querySelectorAll(".board-body.open").forEach(function(b) {
+      if (b !== body) b.classList.remove("open");
+    });
+    container.querySelectorAll(".board-row.active").forEach(function(r) {
+      r.classList.remove("active");
+    });
+  }
+  body.classList.toggle("open", !isOpen);
+  rowEl.classList.toggle("active", !isOpen);
+}
+
 function addNotice() {
   var title = (document.getElementById("notice-title-input").value || "").trim();
   var content = (document.getElementById("notice-content-input").value || "").trim();
+  var dateVal = (document.getElementById("notice-date-input").value || "").trim();
   if (!title) { alert("제목을 입력해 주세요."); return; }
   if (!content) { alert("내용을 입력해 주세요."); return; }
+  // 날짜 입력 시 YYYY-MM-DD → YYYY.MM.DD 변환, 없으면 오늘
+  var dateStr = dateVal ? dateVal.replace(/-/g, ".") : todayStr();
   var notices = getNotices();
-  notices.push({id: Date.now(), title: title, content: content, date: todayStr()});
+  notices.push({id: Date.now(), title: title, content: content, date: dateStr});
   saveNotices(notices);
   document.getElementById("notice-title-input").value = "";
   document.getElementById("notice-content-input").value = "";
+  document.getElementById("notice-date-input").value = "";
   renderNoticePage();
   renderHomeNotices();
   alert("공지사항이 등록되었습니다.");
+}
+
+// 공지 수정 (날짜 포함)
+// ── 공지 상세 뷰 ──
+var _currentNoticeId = null;
+
+function openNoticeDetail(id) {
+  var notices = getNotices();
+  var n = null;
+  for (var i = 0; i < notices.length; i++) { if (notices[i].id === id) { n = notices[i]; break; } }
+  if (!n) return;
+  _currentNoticeId = id;
+  document.getElementById("nd-title").textContent = n.title;
+  document.getElementById("nd-date").textContent = n.date;
+  document.getElementById("nd-content").innerHTML = esc(n.content).replace(/\n/g, "<br>");
+  // 관리자 액션 표시
+  var actions = document.getElementById("nd-admin-actions");
+  if (actions) actions.style.display = isAdmin ? "flex" : "none";
+  var dateEditBtn = document.getElementById("nd-date-edit-btn");
+  if (dateEditBtn) dateEditBtn.style.display = isAdmin ? "inline-block" : "none";
+  // 목록 숨기고 상세 표시
+  var listWrap = document.getElementById("notice-list-wrap");
+  var writeBox = document.getElementById("notice-write-box");
+  var topBar = document.querySelector("#page-notice .board-top-bar");
+  if (listWrap) listWrap.style.display = "none";
+  if (writeBox) writeBox.style.display = "none";
+  if (topBar) topBar.style.display = "none";
+  document.getElementById("notice-detail-view").style.display = "block";
+  window.scrollTo(0, 0);
+}
+
+function closeNoticeDetail() {
+  _currentNoticeId = null;
+  document.getElementById("notice-detail-view").style.display = "none";
+  var listWrap = document.getElementById("notice-list-wrap");
+  var topBar = document.querySelector("#page-notice .board-top-bar");
+  if (listWrap) listWrap.style.display = "";
+  if (topBar) topBar.style.display = "";
+  // 글쓰기 폼은 관리자일 때만 다시 표시 (renderNoticePage가 처리)
+  renderNoticePage();
+  window.scrollTo(0, 0);
+}
+
+function editNoticeDateFromDetail() {
+  if (_currentNoticeId === null) return;
+  var notices = getNotices();
+  var n = null;
+  for (var i = 0; i < notices.length; i++) { if (notices[i].id === _currentNoticeId) { n = notices[i]; break; } }
+  if (!n) return;
+  var newDate = prompt("날짜 (예: 2026.04.15)", n.date);
+  if (newDate === null) return;
+  var d = newDate.trim();
+  if (!d) { alert("날짜를 입력해 주세요."); return; }
+  n.date = d.replace(/-/g, ".");
+  saveNotices(notices);
+  document.getElementById("nd-date").textContent = n.date;
+  renderNoticePage();
+  renderHomeNotices();
+}
+
+function editNoticeFromDetail() {
+  if (_currentNoticeId === null) return;
+  editNotice(_currentNoticeId);
+  // editNotice가 renderNoticePage 호출하므로, 상세뷰 내용도 갱신
+  var notices = getNotices();
+  var n = null;
+  for (var i = 0; i < notices.length; i++) { if (notices[i].id === _currentNoticeId) { n = notices[i]; break; } }
+  if (n) {
+    document.getElementById("nd-title").textContent = n.title;
+    document.getElementById("nd-date").textContent = n.date;
+    document.getElementById("nd-content").innerHTML = esc(n.content).replace(/\n/g, "<br>");
+  }
+}
+
+function deleteNoticeFromDetail() {
+  if (_currentNoticeId === null) return;
+  var id = _currentNoticeId;
+  deleteNotice(id);
+  // 삭제됐으면 목록으로
+  var still = getNotices().some(function(n){ return n.id === id; });
+  if (!still) closeNoticeDetail();
+}
+
+function editNotice(id) {
+  var notices = getNotices();
+  var n = null;
+  for (var i = 0; i < notices.length; i++) { if (notices[i].id === id) { n = notices[i]; break; } }
+  if (!n) return;
+  var newTitle = prompt("제목", n.title);
+  if (newTitle === null) return;
+  var newContent = prompt("내용", n.content);
+  if (newContent === null) return;
+  var newDate = prompt("날짜 (예: 2024.05.07)", n.date);
+  if (newDate === null) return;
+  n.title = newTitle.trim() || n.title;
+  n.content = newContent.trim() || n.content;
+  n.date = (newDate.trim() || n.date).replace(/-/g, ".");
+  saveNotices(notices);
+  renderNoticePage();
+  renderHomeNotices();
+  alert("공지사항이 수정되었습니다.");
 }
 
 function deleteNotice(id) {
@@ -5753,6 +6025,11 @@ function deleteInquiry(id) {
   saveInquiries(getInquiries().filter(function(i) { return i.id !== id; }));
   closeInquiryDetail();
   renderInquiryPage();
+}
+
+function deleteInquiryFromList(id) {
+  if (!isAdmin) { alert("관리자만 삭제할 수 있습니다."); return; }
+  deleteInquiry(id);
 }
 
 function togglePwdRow() {
@@ -5916,23 +6193,20 @@ function triggerIM(inputId) {
 function handleIM(input, imgId, thumbId, storageKey) {
   var file = input.files[0];
   if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var dataUrl = e.target.result;
+  compressImage(file, 1400, 0.75, function(dataUrl) {
     // 페이지 이미지 교체
     var el = document.getElementById(imgId);
     if (el) el.src = dataUrl;
     // 썸네일 교체
     var th = document.getElementById(thumbId);
     if (th) th.src = dataUrl;
-    // localStorage 저장
+    // 저장 (클라우드 연동 시 자동 동기화)
     try {
       localStorage.setItem(IM_KEYS[storageKey], dataUrl);
     } catch(e) {
       alert('저장소 용량 초과. 더 작은 이미지를 사용해주세요.');
     }
-  };
-  reader.readAsDataURL(file);
+  });
 }
 
 function resetIM(imgId, thumbId, storageKey, defaultKey) {
@@ -6045,7 +6319,14 @@ function setFontSize(delta) {
 //  2. 운영 전 보안 규칙 설정 권장:
 //     읽기는 모두 허용, 쓰기는 인증된 관리자만
 // ============================================================
-var FIREBASE_CONFIG = null;   // ← 나중에 여기에 config 붙여넣기
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBoQiH169zpgClYGODJV71X0f6qpwENnYg",
+  authDomain: "haddr2-79f8c.firebaseapp.com",
+  projectId: "haddr2-79f8c",
+  storageBucket: "haddr2-79f8c.firebasestorage.app",
+  messagingSenderId: "915691272447",
+  appId: "1:915691272447:web:4272df67b93d7c15f0f4ca"
+};
 
 // 클라우드에 공유할 키 (사이트 콘텐츠만. 개인설정/세션은 제외)
 var CLOUD_SYNC_KEYS = [
@@ -6199,6 +6480,145 @@ function downloadForm() {
   }
 }
 
+
+// ============================================================
+// 관리자 텍스트 편집 (data-content 인라인 수정)
+// ------------------------------------------------------------
+//  - 관리자 로그인 시 우하단 "텍스트 편집 켜기" 버튼 표시
+//  - 편집 ON: 수정 가능한 텍스트에 점선 + 연필 버튼
+//  - 저장 시 현재 언어(currentLang) 기준으로 pageContent 덮어쓰기
+//    → localStorage 보관(+클라우드 연동 시 자동 동기화)
+//  - 페이지 로드 때 저장본을 pageContent에 병합 후 적용
+// ============================================================
+var CONTENT_OVERRIDE_KEY = "ottuki_content_override";
+var I18N_OVERRIDE_KEY = "ottuki_i18n_override";
+var _editMode = false;
+var _editingKey = null;
+var _editingLang = null;
+var LANG_NAMES = { ko:"한국어", en:"English", vi:"Tiếng Việt", tl:"Tagalog", th:"ไทย" };
+
+// 현재 표시 언어 추적
+function getCurrentLang() {
+  try { return localStorage.getItem("siteLang") || "ko"; } catch(e) { return "ko"; }
+}
+
+// 저장된 수정본 로드 → pageContent에 병합
+function _mergeOverride(storeKey, target) {
+  try {
+    var raw = localStorage.getItem(storeKey);
+    if (!raw) return;
+    var ov = JSON.parse(raw);
+    Object.keys(ov).forEach(function(lang) {
+      if (!target[lang]) target[lang] = {};
+      Object.keys(ov[lang]).forEach(function(key) {
+        target[lang][key] = ov[lang][key];
+      });
+    });
+  } catch(e) {}
+}
+function loadContentOverrides() {
+  _mergeOverride(CONTENT_OVERRIDE_KEY, pageContent);
+  _mergeOverride(I18N_OVERRIDE_KEY, translations);
+}
+
+var EDITABLE_I18N = ["nav_about", "nav_greeting", "nav_purpose", "nav_history", "nav_org", "nav_directions", "nav_services", "nav_psychological", "nav_vision", "nav_emotional", "nav_internet", "nav_family", "nav_play", "nav_rehab", "nav_gallery", "nav_notice", "nav_contact"];
+
+function _attachPencil(el, kind, key) {
+  el.classList.toggle("editable-on", _editMode);
+  var existing = el.querySelector(":scope > .edit-pencil");
+  if (_editMode && !existing) {
+    var p = document.createElement("button");
+    p.className = "edit-pencil";
+    p.type = "button";
+    p.innerHTML = "&#9998;";
+    p.onclick = function(ev) {
+      ev.stopPropagation();
+      ev.preventDefault();
+      openEditModal(key, kind);
+    };
+    el.appendChild(p);
+  } else if (!_editMode && existing) {
+    existing.remove();
+  }
+}
+
+function toggleEditMode() {
+  _editMode = !_editMode;
+  var btn = document.getElementById("edit-mode-toggle");
+  var label = document.getElementById("edit-mode-label");
+  if (btn) btn.classList.toggle("active", _editMode);
+  if (label) label.textContent = _editMode ? "편집 끄기" : "텍스트 편집 켜기";
+  // 본문 텍스트 (pageContent)
+  document.querySelectorAll("[data-content]").forEach(function(el) {
+    _attachPencil(el, "content", el.getAttribute("data-content"));
+  });
+  // 메뉴/라벨 (translations) — 지정된 키만, 서브메뉴 <a>에만 부착
+  document.querySelectorAll(".nav-inner [data-i18n]").forEach(function(el) {
+    var key = el.getAttribute("data-i18n");
+    if (EDITABLE_I18N.indexOf(key) === -1) return;
+    _attachPencil(el, "i18n", key);
+  });
+}
+
+var _editingKind = "content";
+function openEditModal(key, kind) {
+  var lang = getCurrentLang();
+  _editingKey = key;
+  _editingLang = lang;
+  _editingKind = kind || "content";
+  var dict = (_editingKind === "i18n")
+    ? (translations[lang] || translations.ko)
+    : (pageContent[lang] || pageContent.ko);
+  var val = dict[key] !== undefined ? dict[key] : "";
+  var ta = document.getElementById("edit-textarea");
+  ta.value = val;
+  // 메뉴 라벨은 짧으므로 높이 축소
+  ta.style.minHeight = (_editingKind === "i18n") ? "70px" : "240px";
+  document.getElementById("edit-lang-tag").textContent = LANG_NAMES[lang] || lang;
+  document.getElementById("edit-modal-ov").classList.add("open");
+}
+
+function closeEditModal() {
+  document.getElementById("edit-modal-ov").classList.remove("open");
+  _editingKey = null;
+}
+
+function saveEditModal() {
+  if (!_editingKey) return;
+  var val = document.getElementById("edit-textarea").value;
+  var lang = _editingLang;
+  var kind = _editingKind;
+  var STORE_KEY = (kind === "i18n") ? I18N_OVERRIDE_KEY : CONTENT_OVERRIDE_KEY;
+  var target = (kind === "i18n") ? translations : pageContent;
+  // 메모리 반영
+  if (!target[lang]) target[lang] = {};
+  target[lang][_editingKey] = val;
+  // override 저장
+  var ov = {};
+  try { ov = JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); } catch(e) {}
+  if (!ov[lang]) ov[lang] = {};
+  ov[lang][_editingKey] = val;
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(ov));
+  } catch(e) { alert("저장 용량을 초과했습니다."); return; }
+  // 화면 반영
+  if (getCurrentLang() === lang) {
+    if (kind === "i18n") applyTranslations(lang); else applyPageContent(lang);
+  }
+  closeEditModal();
+  if (_editMode) { _editMode = false; toggleEditMode(); }
+}
+
+// 편집모드 토글 버튼은 관리자만 (updateAuthUI에서 .show 제어)
+// 클라우드 동기화 키에 편집본 추가
+if (typeof CLOUD_SYNC_KEYS !== "undefined") {
+  if (CLOUD_SYNC_KEYS.indexOf(CONTENT_OVERRIDE_KEY) === -1) CLOUD_SYNC_KEYS.push(CONTENT_OVERRIDE_KEY);
+  if (CLOUD_SYNC_KEYS.indexOf(I18N_OVERRIDE_KEY) === -1) CLOUD_SYNC_KEYS.push(I18N_OVERRIDE_KEY);
+}
+
+// 초기 로드: 저장본 병합
+loadContentOverrides();
+
 </script>
 <!-- 이미지 관리 버튼 -->
 <button id="img-mgr-btn" onclick="openImgMgr()" style="display:none;">
@@ -6349,6 +6769,27 @@ function downloadForm() {
   <button onclick="setFontSize(1)" title="크게">가＋</button>
   <button onclick="setFontSize(-1)" title="작게">가－</button>
   <button onclick="setFontSize(0)" title="기본" data-i18n="ui_font_reset">초기화</button>
+</div>
+
+
+<!-- 관리자 텍스트 편집 -->
+<button id="edit-mode-toggle" onclick="toggleEditMode()">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+  <span id="edit-mode-label">텍스트 편집 켜기</span>
+</button>
+
+<div id="edit-modal-ov" onclick="if(event.target===this)closeEditModal()">
+  <div id="edit-modal">
+    <h3><span>텍스트 수정</span><span class="lang-tag" id="edit-lang-tag">한국어</span></h3>
+    <div id="edit-modal-body">
+      <textarea id="edit-textarea"></textarea>
+      <div id="edit-hint">※ HTML 태그(&lt;strong&gt;, &lt;br&gt; 등)를 사용할 수 있습니다. 현재 보고 있는 언어가 수정됩니다.</div>
+    </div>
+    <div id="edit-modal-foot">
+      <button class="em-btn em-cancel" onclick="closeEditModal()">취소</button>
+      <button class="em-btn em-save" onclick="saveEditModal()">저장</button>
+    </div>
+  </div>
 </div>
 
 </body>
