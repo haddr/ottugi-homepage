@@ -1937,6 +1937,12 @@ html.fs-2 body{zoom:1.16;}
       <input type="date" id="notice-date-input" style="max-width:200px;">
       <span style="font-size:12px;color:#8a96a3;margin-left:8px;">※ 비워두면 오늘 날짜로 등록됩니다</span>
     </div>
+    <div class="form-row">
+      <label>사진 / 첨부파일</label>
+      <input type="file" id="notice-file-input" multiple onchange="handleNoticeFiles(this)">
+      <div style="font-size:12px;color:#8a96a3;margin-top:6px;">※ 사진은 자동으로 용량이 줄어 여러 장 올릴 수 있습니다. 일반 파일(한글, PDF 등)은 700KB 이하만 가능합니다.</div>
+      <div id="notice-file-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;"></div>
+    </div>
     <div class="form-actions">
       <button class="btn-submit" onclick="addNotice()" data-i18n="btn_register">등록</button>
     </div>
@@ -1967,6 +1973,7 @@ html.fs-2 body{zoom:1.16;}
           </div>
         </div>
         <div class="notice-detail-body" id="nd-content"></div>
+        <div id="nd-files" style="margin-top:22px;"></div>
       </div>
     </div>
   </div>
@@ -5655,7 +5662,7 @@ function renderNoticePage() {
     return "<div class=\"board-item\">" +
       "<div class=\"board-row\" onclick=\"openNoticeDetail(" + n.id + ")\">" +
         "<span class=\"board-num\">" + (notices.length - i) + "</span>" +
-        "<span class=\"board-title-cell\"><span class=\"board-title-text\">" + esc(n.title) + "</span></span>" +
+        "<span class=\"board-title-cell\"><span class=\"board-title-text\">" + esc(n.title) + ((n.files && n.files.length) ? " 📎" : "") + "</span></span>" +
         "<span class=\"board-date-cell\">" + esc(n.date) + "</span>" +
         adminBtns +
       "</div>" +
@@ -5907,6 +5914,131 @@ function toggleBoard(rowEl) {
   rowEl.classList.toggle("active", !isOpen);
 }
 
+// ── 공지 첨부파일 (Firestore "files" 컬렉션에 파일별로 저장) ──
+// 공지 데이터 본체와 분리 저장해 Firestore 문서 1MB 제한을 피함
+var _pendingFiles = [];   // 작성 중 첨부 목록
+var _fileCache = {};      // fid → dataURL 메모리 캐시
+
+function _fmtSize(b) { return b >= 1048576 ? (b/1048576).toFixed(1)+"MB" : Math.max(1, Math.round(b/1024))+"KB"; }
+function _newFid() { return "f" + Date.now() + Math.random().toString(36).slice(2, 7); }
+
+function handleNoticeFiles(input) {
+  var files = Array.prototype.slice.call(input.files || []);
+  input.value = "";
+  files.forEach(function(f) {
+    if (/^image\//.test(f.type)) {
+      _compressImage(f, function(dataUrl, err) {
+        if (err) { alert(f.name + " — " + err); return; }
+        _pendingFiles.push({ fid: _newFid(), name: f.name, size: Math.round(dataUrl.length * 0.75), isImage: true, data: dataUrl });
+        renderPendingFiles();
+      });
+    } else {
+      if (f.size > 700 * 1024) { alert(f.name + " — 파일이 너무 큽니다. 일반 파일은 700KB 이하만 첨부할 수 있습니다."); return; }
+      var r = new FileReader();
+      r.onload = function() {
+        _pendingFiles.push({ fid: _newFid(), name: f.name, size: f.size, isImage: false, data: r.result });
+        renderPendingFiles();
+      };
+      r.readAsDataURL(f);
+    }
+  });
+}
+
+// 이미지 자동 축소: 최대 1400px, JPEG 변환
+function _compressImage(file, cb) {
+  var r = new FileReader();
+  r.onload = function() {
+    var img = new Image();
+    img.onload = function() {
+      var MAX = 1400, w = img.width, h = img.height;
+      if (w > MAX || h > MAX) { var s = Math.min(MAX / w, MAX / h); w = Math.round(w * s); h = Math.round(h * s); }
+      var c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      c.getContext("2d").drawImage(img, 0, 0, w, h);
+      var out = c.toDataURL("image/jpeg", 0.78);
+      if (out.length > 950 * 1024) out = c.toDataURL("image/jpeg", 0.6);
+      if (out.length > 950 * 1024) { cb(null, "사진 용량이 너무 커서 첨부할 수 없습니다."); return; }
+      cb(out, null);
+    };
+    img.onerror = function() { cb(null, "이미지를 읽을 수 없습니다."); };
+    img.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+
+function renderPendingFiles() {
+  var box = document.getElementById("notice-file-list");
+  if (!box) return;
+  box.innerHTML = _pendingFiles.map(function(f, i) {
+    var thumb = (f.isImage && f.data)
+      ? "<img src=\"" + f.data + "\" style=\"width:54px;height:54px;object-fit:cover;border-radius:8px;flex-shrink:0;\">"
+      : "<span style=\"font-size:26px;flex-shrink:0;\">📄</span>";
+    return "<div style=\"display:flex;align-items:center;gap:8px;background:#f4f7fb;border:1px solid #e3eaf3;border-radius:10px;padding:6px 10px;\">" +
+      thumb +
+      "<span style=\"font-size:12px;line-height:1.4;max-width:160px;overflow:hidden;\"><span style=\"display:block;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;\">" + esc(f.name) + "</span><span style=\"color:#8a96a3;\">" + _fmtSize(f.size) + "</span></span>" +
+      "<button onclick=\"removePendingFile(" + i + ")\" style=\"border:none;background:none;color:#e05555;font-size:16px;cursor:pointer;padding:2px;\">✕</button>" +
+    "</div>";
+  }).join("");
+}
+
+function removePendingFile(i) { _pendingFiles.splice(i, 1); renderPendingFiles(); }
+
+// 첨부 전체 업로드 (완료 후 done(성공여부) 호출)
+function _uploadPendingFiles(done) {
+  var toUpload = _pendingFiles.filter(function(f) { return f.data; });
+  if (toUpload.length === 0) { done(true); return; }
+  if (!_cloudReady || !_cloudDb) {
+    alert("첨부파일 업로드에는 인터넷 연결이 필요합니다. 연결 상태를 확인해 주세요.");
+    done(false); return;
+  }
+  var remain = toUpload.length, failed = false;
+  function step() { remain--; if (remain === 0) done(!failed); }
+  toUpload.forEach(function(f) {
+    _cloudDb.collection("files").doc(f.fid).set({
+      name: f.name, size: f.size, isImage: !!f.isImage, data: f.data, ts: Date.now()
+    }).then(function() {
+      _fileCache[f.fid] = f.data;
+      delete f.data; // 업로드 완료된 데이터는 메모리에서 정리
+      step();
+    }, function(e) {
+      failed = true;
+      cloudLog("파일 업로드 실패: " + (e && e.message));
+      step();
+    });
+  });
+}
+
+// 파일 데이터 가져오기 (캐시 → Firestore)
+function _getFileData(fid, cb) {
+  if (_fileCache[fid]) { cb(_fileCache[fid]); return; }
+  if (!_cloudReady || !_cloudDb) { cb(null); return; }
+  _cloudDb.collection("files").doc(fid).get().then(function(doc) {
+    if (doc.exists) { _fileCache[fid] = doc.data().data; cb(_fileCache[fid]); }
+    else cb(null);
+  }, function() { cb(null); });
+}
+
+function downloadNoticeFile(fid, name) {
+  _getFileData(fid, function(data) {
+    if (!data) { alert("파일을 불러올 수 없습니다. 인터넷 연결을 확인해 주세요."); return; }
+    var a = document.createElement("a");
+    a.href = data;
+    a.download = name || "file";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+}
+
+// 공지 삭제 시 첨부파일 문서도 함께 삭제
+function _deleteNoticeFiles(n) {
+  if (!n || !n.files || !n.files.length) return;
+  n.files.forEach(function(f) {
+    delete _fileCache[f.fid];
+    if (_cloudDb) _cloudDb.collection("files").doc(f.fid).delete().catch(function(){});
+  });
+}
+
 function addNotice() {
   var title = (document.getElementById("notice-title-input").value || "").trim();
   var content = (document.getElementById("notice-content-input").value || "").trim();
@@ -5915,15 +6047,24 @@ function addNotice() {
   if (!content) { alert("내용을 입력해 주세요."); return; }
   // 날짜 입력 시 YYYY-MM-DD → YYYY.MM.DD 변환, 없으면 오늘
   var dateStr = dateVal ? dateVal.replace(/-/g, ".") : todayStr();
-  var notices = getNotices();
-  notices.push({id: Date.now(), title: title, content: content, date: dateStr});
-  saveNotices(notices);
-  document.getElementById("notice-title-input").value = "";
-  document.getElementById("notice-content-input").value = "";
-  document.getElementById("notice-date-input").value = "";
-  renderNoticePage();
-  renderHomeNotices();
-  alert("공지사항이 등록되었습니다.");
+
+  _uploadPendingFiles(function(ok) {
+    if (!ok) { alert("첨부파일 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요."); return; }
+    var fileRefs = _pendingFiles.map(function(f) {
+      return { fid: f.fid, name: f.name, size: f.size, isImage: !!f.isImage };
+    });
+    var notices = getNotices();
+    notices.push({id: Date.now(), title: title, content: content, date: dateStr, files: fileRefs});
+    saveNotices(notices);
+    document.getElementById("notice-title-input").value = "";
+    document.getElementById("notice-content-input").value = "";
+    document.getElementById("notice-date-input").value = "";
+    _pendingFiles = [];
+    renderPendingFiles();
+    renderNoticePage();
+    renderHomeNotices();
+    alert("공지사항이 등록되었습니다.");
+  });
 }
 
 // 공지 수정 (날짜 포함)
@@ -5939,6 +6080,27 @@ function openNoticeDetail(id) {
   document.getElementById("nd-title").textContent = n.title;
   document.getElementById("nd-date").textContent = n.date;
   document.getElementById("nd-content").innerHTML = esc(n.content).replace(/\n/g, "<br>");
+  // 첨부파일 표시 (이미지는 본문에, 파일은 다운로드 버튼으로)
+  var filesBox = document.getElementById("nd-files");
+  if (filesBox) {
+    filesBox.innerHTML = "";
+    (n.files || []).forEach(function(f) {
+      if (f.isImage) {
+        var img = document.createElement("img");
+        img.style.cssText = "max-width:100%;border-radius:12px;display:block;margin:14px 0;box-shadow:0 2px 10px rgba(0,0,0,.08);";
+        img.alt = f.name;
+        filesBox.appendChild(img);
+        _getFileData(f.fid, function(data) { if (data) img.src = data; else img.remove(); });
+      } else {
+        var b = document.createElement("button");
+        b.className = "btn-sm btn-gray";
+        b.style.cssText = "display:inline-flex;align-items:center;gap:6px;margin:8px 8px 0 0;font-size:13px;";
+        b.innerHTML = "📎 " + esc(f.name) + " <span style=\"color:#8a96a3;font-size:11px;\">(" + _fmtSize(f.size) + ")</span>";
+        (function(fid, name){ b.onclick = function() { downloadNoticeFile(fid, name); }; })(f.fid, f.name);
+        filesBox.appendChild(b);
+      }
+    });
+  }
   // 관리자 액션 표시
   var actions = document.getElementById("nd-admin-actions");
   if (actions) actions.style.display = isAdmin ? "flex" : "none";
@@ -6029,7 +6191,11 @@ function editNotice(id) {
 
 function deleteNotice(id) {
   if (!confirm("정말 삭제하시겠습니까?")) return;
-  saveNotices(getNotices().filter(function(n) { return n.id !== id; }));
+  var all = getNotices();
+  var target = null;
+  for (var i = 0; i < all.length; i++) { if (all[i].id === id) { target = all[i]; break; } }
+  _deleteNoticeFiles(target);
+  saveNotices(all.filter(function(n) { return n.id !== id; }));
   renderNoticePage();
   renderHomeNotices();
 }
