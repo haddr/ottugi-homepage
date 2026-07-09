@@ -145,7 +145,7 @@ nav.main-nav{background:#fff;border-top:3px solid var(--primary);border-bottom:1
 .notice-title{color:#444;font-size:14px}
 .notice-title .badge{display:inline-block;background:var(--primary);color:#fff;font-size:11px;padding:2px 8px;border-radius:3px;margin-right:8px;font-weight:600}
 .notice-date{color:#aaa;font-size:13px;flex-shrink:0}
-.side-widget{background:linear-gradient(135deg,var(--primary),#2d5fa8);color:#fff;border-radius:8px;padding:24px;margin-bottom:20px}
+.side-widget{background:#6ba4fa;color:#fff;border-radius:8px;padding:24px;margin-bottom:20px}
 /* 홈 오시는길 위젯 */
 .home-dir-wrap{padding:16px 20px 14px;display:flex;flex-direction:column;gap:14px}
 .home-dir-row{display:flex;align-items:flex-start;gap:12px}
@@ -308,7 +308,7 @@ footer{background:#2c3e50;color:#b8c2cc;padding:40px 20px 20px;margin-top:40px}
 .admin-badge{background:#1a4789;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;display:none}
 .btn-sm{border:none;padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600}
 .btn-blue{background:var(--primary);color:#fff}.btn-blue:hover{background:var(--primary-dark)}
-.btn-gray{background:#64748b;color:#fff;display:none}.btn-gray:hover{background:#475569}
+.btn-gray{background:#64748b;color:#fff}.btn-gray:hover{background:#475569}
 .btn-red{background:#fee2e2;color:#dc2626}.btn-red:hover{background:#fecaca}
 .write-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:24px;margin-bottom:24px;display:none}
 .write-box.show{display:block}
@@ -1109,6 +1109,43 @@ html.fs-2 body{zoom:1.16;}
 #edit-mode-toggle.show{display:flex;}
 #edit-mode-toggle.active{background:#4F8EF7;}
 
+/* 관리자 대시보드 버튼 */
+#admin-dash-toggle{
+  position:fixed;bottom:140px;right:28px;z-index:9000;
+  background:#0f766e;color:#fff;border:none;border-radius:50px;
+  padding:11px 20px;font-size:13.5px;font-weight:700;cursor:pointer;
+  font-family:inherit;box-shadow:0 4px 16px rgba(15,118,110,.4);
+  display:none;align-items:center;gap:7px;
+}
+#admin-dash-toggle.show{display:flex;}
+#admin-dash-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100000;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;}
+#admin-dash-overlay.open{display:flex;}
+#admin-dash{background:#fff;border-radius:14px;padding:28px;max-width:900px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+#admin-dash h2{margin:0 0 4px;font-size:22px;color:#1a2d4a;}
+#admin-dash .dash-sub{color:#94a3b8;font-size:13px;margin-bottom:22px;}
+#admin-dash .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
+#admin-dash .stat-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;}
+#admin-dash .stat-card .lbl{font-size:12px;color:#64748b;margin-bottom:6px;}
+#admin-dash .stat-card .val{font-size:28px;font-weight:800;color:#0f766e;}
+#admin-dash .section-title{font-size:15px;font-weight:700;color:#1a2d4a;margin:20px 0 10px;display:flex;align-items:center;gap:8px;}
+#admin-dash .bar-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding:0 4px;border-bottom:1px solid #e2e8f0;margin-bottom:20px;}
+#admin-dash .bar{flex:1;background:linear-gradient(to top,#4F8EF7,#8EC0FC);border-radius:4px 4px 0 0;position:relative;min-height:2px;transition:height .3s;}
+#admin-dash .bar .bar-val{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:11px;font-weight:600;color:#334155;}
+#admin-dash .bar-labels{display:flex;gap:6px;padding:0 4px;margin-bottom:24px;}
+#admin-dash .bar-labels span{flex:1;text-align:center;font-size:11px;color:#64748b;}
+#admin-dash table{width:100%;border-collapse:collapse;font-size:13px;}
+#admin-dash table th{background:#f1f5f9;padding:10px 8px;text-align:left;font-weight:700;color:#475569;font-size:12px;border-bottom:1px solid #cbd5e1;}
+#admin-dash table td{padding:10px 8px;border-bottom:1px solid #f1f5f9;color:#334155;}
+#admin-dash .empty{padding:20px;text-align:center;color:#94a3b8;font-size:13px;background:#f8fafc;border-radius:8px;}
+#admin-dash .close-btn{position:absolute;top:20px;right:20px;background:none;border:none;font-size:24px;color:#64748b;cursor:pointer;line-height:1;padding:4px 10px;border-radius:6px;}
+#admin-dash .close-btn:hover{background:#f1f5f9;}
+@media(max-width:600px){
+  #admin-dash{padding:20px;}
+  #admin-dash .stat-row{grid-template-columns:1fr;}
+  #admin-dash table{font-size:11.5px;}
+  #admin-dash table th, #admin-dash table td{padding:7px 5px;}
+}
+
 
 /* 메뉴 편집 연필 위치 보정 */
 .nav-inner [data-i18n].editable-on{outline-offset:-2px;}
@@ -1268,11 +1305,10 @@ html.fs-2 body{zoom:1.16;}
 
   <!-- 고객상담 (우 상단) -->
   <div class="side-widget">
-    <h3 data-i18n="counsel_title">📞 고객 상담 안내</h3>
+    <h3 data-i18n="counsel_title">📞 상담 안내</h3>
     <p data-i18n="counsel_desc">궁금하신 점이 있으시면 언제든지 문의주세요. 친절히 안내해 드리겠습니다.</p>
     <div class="phone" style="display:flex;flex-direction:column;gap:2px"><span>042-624-1418</span><span>042-624-1419</span></div>
     <p style="font-size:12px;opacity:.85" data-i18n="counsel_hours">평일 10:00 ~ 21:00 / 토요일 10:00 ~ 17:00</p>
-    <a href="#" class="side-widget-btn" data-i18n="counsel_btn">온라인 문의 →</a>
   </div>
 
   <!-- 갤러리 (좌 하단) 슬라이더 -->
@@ -2542,12 +2578,14 @@ html.fs-2 body{zoom:1.16;}
 <div id="page-purpose" class="page-section">
 
 <!-- Hero 배너 -->
-<div style="background:linear-gradient(135deg,#E3EEFF 0%,#EDF3FF 45%,#F0F7FF 100%);padding:48px 60px;">
-  <h2 style="font-size:32px;font-weight:800;color:#1a2d4a;margin-bottom:12px;" data-i18n="nav_purpose">설립 목적</h2>
-  <div class="breadcrumb" style="color:#7a95b0;font-size:13px;">
-    <a href="#" onclick="showPage('home');return false;" style="color:#4F8EF7;">HOME</a>
-    <span> › </span><a href="#" onclick="showPage('about');return false;" style="color:#4F8EF7;" data-i18n="nav_about">센터소개</a>
-    <span> › </span><span data-i18n="nav_purpose">설립 목적</span>
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <h2 data-i18n="nav_purpose">설립 목적</h2>
+    <div class="breadcrumb">
+      <a href="#" onclick="showPage('home');return false;">HOME</a>
+      <span> › </span><a href="#" onclick="showPage('about');return false;" data-i18n="nav_about">센터소개</a>
+      <span> › </span><span data-i18n="nav_purpose">설립 목적</span>
+    </div>
   </div>
 </div>
 
@@ -3472,7 +3510,7 @@ var translations = {
     notice3:"서비스 이용 만족도 설문조사 안내",
     notice4:"개인정보 처리방침 개정 안내",
     notice5:"5월 휴관일 안내 (어린이날)",
-    counsel_title:"📞 고객 상담 안내",
+    counsel_title:"📞 상담 안내",
     counsel_desc:"궁금하신 점이 있으시면 언제든지 문의주세요. 친절히 안내해 드리겠습니다.",
     counsel_hours:"평일 10:00 ~ 21:00 / 토요일 10:00 ~ 17:00",
     counsel_btn:"온라인 문의 →",
@@ -5014,26 +5052,50 @@ function editGalleryPost(id) {
   var post = null;
   for (var i = 0; i < posts.length; i++) { if (posts[i].id === id) { post = posts[i]; break; } }
   if (!post) return;
-  var currentTitle = post.title || post.caption || "";
-  var newTitle = prompt("제목", currentTitle);
-  if (newTitle === null) return;
-  var newContent = prompt("내용 (여러 줄 입력 가능)", post.content || "");
-  if (newContent === null) return;
-  var newDate = prompt("날짜 (예: 2026.07.07)", post.date || "");
-  if (newDate === null) return;
-  var t = newTitle.trim();
-  if (t) {
+
+  // 편집 모달 생성 (한 화면에 제목/내용/날짜)
+  var overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;";
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">'
+    + '<h3 style="margin:0 0 18px;font-size:18px;">✏️ 게시물 수정</h3>'
+    + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">제목</label>'
+    + '<input id="_geTitle" type="text" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;">'
+    + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">본문 내용</label>'
+    + '<textarea id="_geContent" rows="7" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;font-family:inherit;resize:vertical;"></textarea>'
+    + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">날짜</label>'
+    + '<input id="_geDate" type="text" placeholder="예: 2026.07.09" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:20px;box-sizing:border-box;">'
+    + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
+      + '<button id="_geCancel" style="padding:10px 18px;border:1px solid #cbd5e1;background:#fff;color:#475569;border-radius:8px;cursor:pointer;font-weight:600;">취소</button>'
+      + '<button id="_geSave" style="padding:10px 22px;border:none;background:#4F8EF7;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;">저장</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+
+  // 기존 값 채우기
+  document.getElementById("_geTitle").value = post.title || post.caption || "";
+  document.getElementById("_geContent").value = post.content || "";
+  document.getElementById("_geDate").value = post.date || "";
+
+  function close() { overlay.remove(); }
+  document.getElementById("_geCancel").onclick = close;
+  overlay.onclick = function(e) { if (e.target === overlay) close(); };
+
+  document.getElementById("_geSave").onclick = function() {
+    var t = document.getElementById("_geTitle").value.trim();
+    var c = document.getElementById("_geContent").value;
+    var d = document.getElementById("_geDate").value.trim();
+    if (!t) { alert("제목을 입력해 주세요."); return; }
     post.title = t;
-    if ("caption" in post) post.caption = t; // 옛 포맷 호환
-  }
-  post.content = newContent; // 빈 값 허용
-  var d = newDate.trim();
-  if (d) post.date = d.replace(/-/g, ".");
-  saveGalleryItems(posts);
-  openGalleryPost(id);
-  if (typeof renderGalleryPage === "function") renderGalleryPage();
-  if (typeof renderHomeGallery === "function") renderHomeGallery();
-  alert("게시물이 수정되었습니다.");
+    if ("caption" in post) post.caption = t;
+    post.content = c;
+    if (d) post.date = d.replace(/-/g, ".");
+    saveGalleryItems(posts);
+    close();
+    openGalleryPost(id);
+    if (typeof renderGalleryPage === "function") renderGalleryPage();
+    if (typeof renderHomeGallery === "function") renderHomeGallery();
+  };
 }
 
 function editGalleryDate(id) {
@@ -5051,39 +5113,6 @@ function editGalleryDate(id) {
   openGalleryPost(id);
   if (typeof renderGalleryPage === "function") renderGalleryPage();
   if (typeof renderHomeGallery === "function") renderHomeGallery();
-}
-
-function editGalleryTitle(id) {
-  if (!isAdmin) { alert("관리자만 수정할 수 있습니다."); return; }
-  var posts = getGalleryItems();
-  var post = null;
-  for (var i = 0; i < posts.length; i++) { if (posts[i].id === id) { post = posts[i]; break; } }
-  if (!post) return;
-  var current = post.title || post.caption || "";
-  var newTitle = prompt("제목", current);
-  if (newTitle === null) return;
-  var t = newTitle.trim();
-  if (!t) { alert("제목을 입력해 주세요."); return; }
-  post.title = t;
-  if ("caption" in post) post.caption = t; // 이전 포맷 호환
-  saveGalleryItems(posts);
-  openGalleryPost(id);
-  if (typeof renderGalleryPage === "function") renderGalleryPage();
-  if (typeof renderHomeGallery === "function") renderHomeGallery();
-}
-
-function editGalleryContent(id) {
-  if (!isAdmin) { alert("관리자만 수정할 수 있습니다."); return; }
-  var posts = getGalleryItems();
-  var post = null;
-  for (var i = 0; i < posts.length; i++) { if (posts[i].id === id) { post = posts[i]; break; } }
-  if (!post) return;
-  var newContent = prompt("내용 (여러 줄 입력 가능. 줄바꿈은 \\n으로 처리됩니다)", post.content || "");
-  if (newContent === null) return;
-  post.content = newContent;
-  saveGalleryItems(posts);
-  openGalleryPost(id);
-  if (typeof renderGalleryPage === "function") renderGalleryPage();
 }
 
 function deleteGalleryPost(id) {
@@ -5676,6 +5705,9 @@ function applyLoginUI() {
     editToggle.classList.toggle("show", isAdmin);
     if (!isAdmin && typeof _editMode !== "undefined" && _editMode) { _editMode = false; toggleEditMode(); }
   }
+  // 관리자 대시보드 버튼
+  var dashToggle = document.getElementById("admin-dash-toggle");
+  if (dashToggle) dashToggle.classList.toggle("show", isAdmin);
 }
 
 
@@ -6788,6 +6820,8 @@ localStorage.removeItem = function(key) {
         firebase.auth().onAuthStateChanged(function(u) { _applyAuthUser(u); });
       } catch(e) { cloudLog("Auth 초기화 실패: " + e.message); }
       cloudPullAll();
+      // 방문 기록 (일일 1회, 세션당 1회)
+      try { logVisit(); } catch(e) { cloudLog("방문 기록 실패: " + e.message); }
     } catch(e) {
       cloudLog("초기화 실패: " + e.message);
     }
@@ -6899,6 +6933,101 @@ function toggleEditMode() {
 }
 
 var _editingKind = "content";
+var _editModeUi = "easy";      // "easy" | "pro"
+var _editOriginalHtml = "";    // 원본 HTML 보관 (쉬운 모드에서 저장할 때 참조)
+var _editTextParts = [];       // 원본에서 뽑은 텍스트 조각들
+
+// ── HTML → 텍스트 조각 목록 (쉬운 편집용) ──
+// 결과: [{path, text}] 형태로 텍스트 노드들을 순서대로 뽑음
+function _extractTextParts(html) {
+  var wrap = document.createElement("div");
+  wrap.innerHTML = html;
+  var parts = [];
+  function walk(node) {
+    for (var i = 0; i < node.childNodes.length; i++) {
+      var c = node.childNodes[i];
+      if (c.nodeType === 3) { // 텍스트 노드
+        var t = c.nodeValue;
+        // 공백/줄바꿈만인 것은 제외
+        if (t && t.replace(/\s/g, "").length > 0) {
+          parts.push({ node: c, text: t.replace(/\s+/g, " ").trim() });
+        }
+      } else if (c.nodeType === 1) {
+        walk(c);
+      }
+    }
+  }
+  walk(wrap);
+  return { wrap: wrap, parts: parts };
+}
+
+// ── 텍스트 조각 목록 → 편집창 표시용 문자열 ──
+function _partsToText(parts) {
+  if (parts.length <= 1) return parts.length ? parts[0].text : "";
+  return parts.map(function(p, i) { return "[" + (i+1) + "] " + p.text; }).join("\n\n");
+}
+
+// ── 편집창 문자열 → 조각별 새 텍스트 배열 ──
+function _textToParts(str, count) {
+  if (count <= 1) return [str];
+  // "[N] xxx" 형식 파싱, 여러 줄 지원
+  var result = new Array(count).fill(null);
+  var re = /\[(\d+)\]\s*([\s\S]*?)(?=\n\s*\[\d+\]|\s*$)/g;
+  var m;
+  while ((m = re.exec(str)) !== null) {
+    var idx = parseInt(m[1], 10) - 1;
+    if (idx >= 0 && idx < count) result[idx] = m[2].trim();
+  }
+  return result;
+}
+
+function setEditMode(mode) {
+  var ta = document.getElementById("edit-textarea");
+  var hint = document.getElementById("edit-hint");
+  var easyBtn = document.getElementById("edit-mode-easy");
+  var proBtn = document.getElementById("edit-mode-pro");
+  // 현재 편집중이면 값을 보존해서 모드 전환
+  if (mode === _editModeUi) return;
+
+  if (mode === "pro") {
+    // 쉬운 → 전문가: 현재 쉬운 편집값을 원본 HTML에 반영한 결과를 넣음
+    var currentEasy = ta.value;
+    var newHtml = _applyEasyToHtml(currentEasy);
+    _editModeUi = "pro";
+    ta.value = newHtml;
+    ta.style.fontFamily = "'Menlo','Consolas',monospace";
+    ta.style.fontSize = "13px";
+    hint.textContent = "※ HTML 태그를 직접 편집할 수 있습니다. 잘 모르면 쉬운 편집을 사용하세요.";
+    easyBtn.style.background = "transparent"; easyBtn.style.color = "#64748b"; easyBtn.style.boxShadow = "none"; easyBtn.style.fontWeight = "600";
+    proBtn.style.background = "#fff"; proBtn.style.color = "#1a2d4a"; proBtn.style.boxShadow = "0 1px 3px rgba(0,0,0,.08)"; proBtn.style.fontWeight = "700";
+  } else {
+    // 전문가 → 쉬운: 현재 HTML을 파싱해서 쉬운 편집용 텍스트로
+    var currentHtml = ta.value;
+    var ext = _extractTextParts(currentHtml);
+    _editOriginalHtml = currentHtml;
+    _editTextParts = ext.parts;
+    _editModeUi = "easy";
+    ta.value = _partsToText(ext.parts);
+    ta.style.fontFamily = "inherit";
+    ta.style.fontSize = "14px";
+    hint.textContent = "글자만 바꿔주세요. 꾸밈(굵기/줄바꿈/색깔)은 자동으로 유지됩니다.";
+    easyBtn.style.background = "#fff"; easyBtn.style.color = "#1a2d4a"; easyBtn.style.boxShadow = "0 1px 3px rgba(0,0,0,.08)"; easyBtn.style.fontWeight = "700";
+    proBtn.style.background = "transparent"; proBtn.style.color = "#64748b"; proBtn.style.boxShadow = "none"; proBtn.style.fontWeight = "600";
+  }
+}
+
+// 쉬운 편집값 → HTML 적용 (텍스트 조각을 원본 자리에 다시 채워넣음)
+function _applyEasyToHtml(easyText) {
+  if (!_editTextParts.length) return easyText; // 텍스트 조각이 없으면 그대로
+  var newTexts = _textToParts(easyText, _editTextParts.length);
+  // 원본 HTML을 다시 파싱해서 같은 순서의 텍스트 노드를 갈아끼움
+  var ext = _extractTextParts(_editOriginalHtml);
+  ext.parts.forEach(function(p, i) {
+    if (newTexts[i] !== null && newTexts[i] !== undefined) p.node.nodeValue = newTexts[i];
+  });
+  return ext.wrap.innerHTML;
+}
+
 function openEditModal(key, kind) {
   var lang = getCurrentLang();
   _editingKey = key;
@@ -6909,10 +7038,43 @@ function openEditModal(key, kind) {
     : (pageContent[lang] || pageContent.ko);
   var val = dict[key] !== undefined ? dict[key] : "";
   var ta = document.getElementById("edit-textarea");
-  ta.value = val;
-  // 메뉴 라벨은 짧으므로 높이 축소
   ta.style.minHeight = (_editingKind === "i18n") ? "70px" : "240px";
   document.getElementById("edit-lang-tag").textContent = LANG_NAMES[lang] || lang;
+
+  // HTML이 들어있는지 감지 (태그가 하나라도 있으면)
+  var hasHtml = /<[a-z][\s\S]*?>/i.test(val);
+  _editOriginalHtml = val;
+  if (hasHtml) {
+    // 쉬운 모드로 시작 (텍스트만 뽑아 편집)
+    var ext = _extractTextParts(val);
+    _editTextParts = ext.parts;
+    _editModeUi = "easy";
+    ta.value = _partsToText(ext.parts);
+    ta.style.fontFamily = "inherit";
+    ta.style.fontSize = "14px";
+    // 버튼 상태
+    document.getElementById("edit-mode-easy").style.background = "#fff";
+    document.getElementById("edit-mode-easy").style.color = "#1a2d4a";
+    document.getElementById("edit-mode-easy").style.boxShadow = "0 1px 3px rgba(0,0,0,.08)";
+    document.getElementById("edit-mode-easy").style.fontWeight = "700";
+    document.getElementById("edit-mode-pro").style.background = "transparent";
+    document.getElementById("edit-mode-pro").style.color = "#64748b";
+    document.getElementById("edit-mode-pro").style.boxShadow = "none";
+    document.getElementById("edit-mode-pro").style.fontWeight = "600";
+    document.getElementById("edit-hint").textContent = "글자만 바꿔주세요. 꾸밈(굵기/줄바꿈/색깔)은 자동으로 유지됩니다. [1], [2] 같은 번호는 지우지 마세요.";
+  } else {
+    // HTML 태그 없는 순수 텍스트 → 쉬운 편집만 (모드 토글 숨김)
+    _editTextParts = [];
+    _editModeUi = "easy";
+    ta.value = val;
+    ta.style.fontFamily = "inherit";
+    ta.style.fontSize = "14px";
+    document.getElementById("edit-hint").textContent = "내용을 자유롭게 편집하세요.";
+  }
+  // 토글 표시 여부 (HTML 있을 때만)
+  var toggleBar = document.getElementById("edit-mode-easy").parentElement;
+  toggleBar.style.display = hasHtml ? "flex" : "none";
+
   document.getElementById("edit-modal-ov").classList.add("open");
 }
 
@@ -6923,15 +7085,20 @@ function closeEditModal() {
 
 function saveEditModal() {
   if (!_editingKey) return;
-  var val = document.getElementById("edit-textarea").value;
+  var ta = document.getElementById("edit-textarea");
+  var val;
+  if (_editModeUi === "easy" && _editTextParts.length > 0) {
+    // 쉬운 편집 → 원본 HTML에 새 텍스트 반영
+    val = _applyEasyToHtml(ta.value);
+  } else {
+    val = ta.value;
+  }
   var lang = _editingLang;
   var kind = _editingKind;
   var STORE_KEY = (kind === "i18n") ? I18N_OVERRIDE_KEY : CONTENT_OVERRIDE_KEY;
   var target = (kind === "i18n") ? translations : pageContent;
-  // 메모리 반영
   if (!target[lang]) target[lang] = {};
   target[lang][_editingKey] = val;
-  // override 저장
   var ov = {};
   try { ov = JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); } catch(e) {}
   if (!ov[lang]) ov[lang] = {};
@@ -6939,7 +7106,6 @@ function saveEditModal() {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(ov));
   } catch(e) { alert("저장 용량을 초과했습니다."); return; }
-  // 화면 반영
   if (getCurrentLang() === lang) {
     if (kind === "i18n") applyTranslations(lang); else applyPageContent(lang);
   }
@@ -6956,6 +7122,149 @@ if (typeof CLOUD_SYNC_KEYS !== "undefined") {
 
 // 초기 로드: 저장본 병합
 loadContentOverrides();
+
+// ============================================================
+// 관리자 대시보드: 방문 통계 + 회원 목록
+// ============================================================
+
+// ── 방문 기록 (하루 1회 카운트, sessionStorage로 세션 중복 방지) ──
+function logVisit() {
+  if (!_cloudReady || !_cloudDb) return;
+  // 이 세션에서 이미 기록했으면 스킵 (탭 이동/새로고침에 중복 카운트 방지)
+  try { if (sessionStorage.getItem("ottuki_visit_logged")) return; } catch(e){}
+
+  var today = new Date();
+  var dateKey = today.getFullYear() + String(today.getMonth()+1).padStart(2,"0") + String(today.getDate()).padStart(2,"0"); // YYYYMMDD
+
+  _cloudDb.collection("visits").doc(dateKey).set({
+    count: firebase.firestore.FieldValue.increment(1),
+    date: dateKey,
+    lastAt: Date.now()
+  }, { merge: true }).then(function() {
+    try { sessionStorage.setItem("ottuki_visit_logged", "1"); } catch(e){}
+  }).catch(function(e) { cloudLog("방문 카운트 실패: " + e.message); });
+}
+
+// ── 대시보드 열기 ──
+function openAdminDash() {
+  if (!isAdmin) { alert("관리자만 접근할 수 있습니다."); return; }
+  document.getElementById("admin-dash-overlay").classList.add("open");
+  document.getElementById("dash-updated").textContent = "업데이트: " + new Date().toLocaleString("ko-KR");
+  // 통계 로딩
+  loadVisitStats();
+  loadUserList();
+}
+
+function closeAdminDash() {
+  document.getElementById("admin-dash-overlay").classList.remove("open");
+}
+
+// ── 방문 통계 로드 (최근 30일치) ──
+function loadVisitStats() {
+  if (!_cloudReady || !_cloudDb) {
+    ["dash-today","dash-week","dash-total"].forEach(function(id){ document.getElementById(id).textContent = "-"; });
+    document.getElementById("dash-chart").innerHTML = '<div style="width:100%;text-align:center;color:#94a3b8;font-size:12px;padding:40px 0;">인터넷 연결이 필요합니다</div>';
+    document.getElementById("dash-chart-labels").innerHTML = "";
+    return;
+  }
+  _cloudDb.collection("visits").get().then(function(snap) {
+    var byDate = {};
+    var total = 0;
+    snap.forEach(function(doc){ var d = doc.data(); byDate[doc.id] = d.count || 0; total += d.count || 0; });
+
+    var today = new Date();
+    var todayKey = _ymd(today);
+    var todayCount = byDate[todayKey] || 0;
+
+    // 이번 주 (월요일 시작)
+    var day = today.getDay(); // 0=일
+    var mondayOffset = day === 0 ? 6 : day - 1;
+    var monday = new Date(today); monday.setDate(today.getDate() - mondayOffset);
+    var weekCount = 0;
+    for (var d = new Date(monday); d <= today; d.setDate(d.getDate()+1)) {
+      weekCount += byDate[_ymd(d)] || 0;
+    }
+
+    document.getElementById("dash-today").textContent = todayCount;
+    document.getElementById("dash-week").textContent = weekCount;
+    document.getElementById("dash-total").textContent = total;
+
+    // 최근 7일 막대그래프
+    var days = [], labels = [], counts = [];
+    for (var i = 6; i >= 0; i--) {
+      var dt = new Date(today); dt.setDate(today.getDate() - i);
+      days.push(_ymd(dt));
+      labels.push((dt.getMonth()+1) + "/" + dt.getDate());
+      counts.push(byDate[_ymd(dt)] || 0);
+    }
+    var max = Math.max.apply(null, counts.concat([1]));
+    var chart = document.getElementById("dash-chart");
+    var chartLabels = document.getElementById("dash-chart-labels");
+    chart.innerHTML = counts.map(function(c) {
+      var h = Math.round(c / max * 100);
+      return '<div class="bar" style="height:' + h + '%"><span class="bar-val">' + (c || "") + '</span></div>';
+    }).join("");
+    chartLabels.innerHTML = labels.map(function(l){ return "<span>" + l + "</span>"; }).join("");
+  }).catch(function(e) {
+    cloudLog("방문 통계 조회 실패: " + e.message);
+    ["dash-today","dash-week","dash-total"].forEach(function(id){ document.getElementById(id).textContent = "?"; });
+  });
+}
+
+function _ymd(d) {
+  return d.getFullYear() + String(d.getMonth()+1).padStart(2,"0") + String(d.getDate()).padStart(2,"0");
+}
+
+// ── 회원 목록 로드 (Firestore users 컬렉션) ──
+function loadUserList() {
+  var box = document.getElementById("dash-users");
+  var countEl = document.getElementById("dash-user-count");
+  if (!_cloudReady || !_cloudDb) {
+    box.innerHTML = '<div class="empty">인터넷 연결이 필요합니다.</div>';
+    countEl.textContent = "-";
+    return;
+  }
+  box.innerHTML = '<div class="empty">불러오는 중...</div>';
+  _cloudDb.collection("users").get().then(function(snap) {
+    var users = [];
+    snap.forEach(function(doc){ users.push(doc.data()); });
+    countEl.textContent = users.length;
+    if (users.length === 0) {
+      box.innerHTML = '<div class="empty">아직 가입한 회원이 없습니다.</div>';
+      return;
+    }
+    // 가입일 최신순
+    users.sort(function(a,b) { return (b.joinDate || "").localeCompare(a.joinDate || ""); });
+    var rows = users.map(function(u) {
+      var gender = u.gender === "male" ? "남" : u.gender === "female" ? "여" : "-";
+      var birth = u.birth ? _fmtBirth(u.birth) : "-";
+      return "<tr>"
+        + "<td>" + esc(u.name || "-") + "</td>"
+        + "<td>" + esc(u.email || "-") + "</td>"
+        + "<td>" + birth + "</td>"
+        + "<td>" + gender + "</td>"
+        + "<td>" + esc(u.joinDate || "-") + "</td>"
+      + "</tr>";
+    }).join("");
+    box.innerHTML =
+      '<div style="overflow-x:auto;">'
+      + '<table>'
+      + '<thead><tr><th>이름</th><th>이메일</th><th>생년월일</th><th>성별</th><th>가입일</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody>'
+      + '</table>'
+      + '</div>';
+  }).catch(function(e) {
+    cloudLog("회원 조회 실패: " + e.message);
+    box.innerHTML = '<div class="empty">회원 목록을 불러올 수 없습니다.</div>';
+  });
+}
+
+function _fmtBirth(b) {
+  // 6자리 YYMMDD → YY.MM.DD
+  var s = String(b);
+  if (s.length === 6) return s.slice(0,2) + "." + s.slice(2,4) + "." + s.slice(4,6);
+  return s;
+}
 
 </script>
 <!-- 이미지 관리 버튼 -->
@@ -7110,6 +7419,36 @@ loadContentOverrides();
 </div>
 
 
+<!-- 관리자 대시보드 -->
+<button id="admin-dash-toggle" onclick="openAdminDash()">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z"/></svg>
+  <span>관리자 대시보드</span>
+</button>
+
+<div id="admin-dash-overlay" onclick="if(event.target===this)closeAdminDash()">
+  <div id="admin-dash" style="position:relative;">
+    <button class="close-btn" onclick="closeAdminDash()" aria-label="닫기">×</button>
+    <h2>📊 관리자 대시보드</h2>
+    <div class="dash-sub" id="dash-updated">-</div>
+
+    <div class="section-title">📈 방문자 통계</div>
+    <div class="stat-row">
+      <div class="stat-card"><div class="lbl">오늘 방문</div><div class="val" id="dash-today">-</div></div>
+      <div class="stat-card"><div class="lbl">이번 주 방문</div><div class="val" id="dash-week">-</div></div>
+      <div class="stat-card"><div class="lbl">총 방문자</div><div class="val" id="dash-total">-</div></div>
+    </div>
+
+    <div class="section-title">📅 최근 7일 방문 추이</div>
+    <div class="bar-chart" id="dash-chart"></div>
+    <div class="bar-labels" id="dash-chart-labels"></div>
+
+    <div class="section-title">👥 회원 목록 (<span id="dash-user-count">0</span>명)</div>
+    <div id="dash-users">
+      <div class="empty">불러오는 중...</div>
+    </div>
+  </div>
+</div>
+
 <!-- 관리자 텍스트 편집 -->
 <button id="edit-mode-toggle" onclick="toggleEditMode()">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
@@ -7120,8 +7459,12 @@ loadContentOverrides();
   <div id="edit-modal">
     <h3><span>텍스트 수정</span><span class="lang-tag" id="edit-lang-tag">한국어</span></h3>
     <div id="edit-modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:12px;background:#f1f5f9;padding:4px;border-radius:8px;">
+        <button type="button" id="edit-mode-easy" onclick="setEditMode('easy')" style="flex:1;padding:8px 12px;border:none;border-radius:6px;background:#fff;color:#1a2d4a;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08);">✍️ 쉬운 편집</button>
+        <button type="button" id="edit-mode-pro" onclick="setEditMode('pro')" style="flex:1;padding:8px 12px;border:none;border-radius:6px;background:transparent;color:#64748b;font-weight:600;font-size:13px;cursor:pointer;">🛠 전문가(HTML)</button>
+      </div>
       <textarea id="edit-textarea"></textarea>
-      <div id="edit-hint">※ HTML 태그(&lt;strong&gt;, &lt;br&gt; 등)를 사용할 수 있습니다. 현재 보고 있는 언어가 수정됩니다.</div>
+      <div id="edit-hint">글자만 바꿔주세요. 굵기·줄바꿈·색깔 같은 꾸밈은 자동으로 유지됩니다.</div>
     </div>
     <div id="edit-modal-foot">
       <button class="em-btn em-cancel" onclick="closeEditModal()">취소</button>
