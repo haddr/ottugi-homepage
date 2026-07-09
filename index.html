@@ -35,8 +35,11 @@
 <meta name="description" content="사회복지법인 평화의마을 오뚜기사회서비스센터 — 대전 동구 아동·청소년 심리지원, 발달재활, 정서발달 등 국가바우처 전문 사회서비스 기관">
 <meta name="keywords" content="오뚜기사회서비스센터, 평화의마을, 대전 바우처, 아동 심리지원, 발달재활서비스, 대전 동구 사회서비스">
 <meta name="author" content="사회복지법인 평화의마을 오뚜기사회서비스센터">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://ottugi.cloud/">
 <!-- 오픈그래프 (카카오톡/SNS 공유 미리보기) -->
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://ottugi.cloud/">
 <meta property="og:title" content="오뚜기사회서비스센터 | 사회복지법인 평화의마을">
 <meta property="og:description" content="넘어져도 다시 일어나는 오뚜기처럼 — 아동·청소년 심리지원, 발달재활 등 국가바우처 전문 사회서비스 기관 (대전 동구)">
 <meta property="og:locale" content="ko_KR">
@@ -44,6 +47,30 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="오뚜기사회서비스센터 | 사회복지법인 평화의마을">
 <meta name="twitter:description" content="아동·청소년 국가바우처 전문 사회서비스 기관 (대전 동구)">
+<!-- 검색엔진용 기관 정보 (구조화 데이터) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "오뚜기사회서비스센터",
+  "alternateName": "사회복지법인 평화의마을 오뚜기사회서비스센터",
+  "url": "https://ottugi.cloud/",
+  "telephone": "042-624-1418",
+  "email": "6738337@daum.net",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "대전로 930 진영빌딩 3층",
+    "addressLocality": "대전광역시 동구",
+    "addressRegion": "대전광역시",
+    "addressCountry": "KR"
+  },
+  "openingHoursSpecification": [
+    {"@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "10:00", "closes": "21:00"},
+    {"@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "10:00", "closes": "17:00"}
+  ],
+  "description": "대전 동구 아동·청소년 심리지원, 발달재활, 정서발달 등 국가바우처 전문 사회서비스 기관"
+}
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:"Malgun Gothic","맑은 고딕","Noto Sans KR","Sarabun","Tahoma",sans-serif;color:#2a2d34;line-height:1.6;background:#FBFCFE}
@@ -5613,8 +5640,19 @@ function submitLogin() {
     errEl.classList.add("show");
     return;
   }
-  firebase.auth().signInWithEmailAndPassword(email, pw)
+  // 관리자 이메일이면 SESSION persistence (탭 닫으면 로그아웃), 그 외는 LOCAL (자동로그인 유지)
+  var isAdminEmail = email === ADMIN_EMAIL.toLowerCase();
+  var Persistence = firebase.auth.Auth.Persistence;
+  var persistence = isAdminEmail ? Persistence.SESSION : Persistence.LOCAL;
+  firebase.auth().setPersistence(persistence)
     .then(function() {
+      return firebase.auth().signInWithEmailAndPassword(email, pw);
+    })
+    .then(function() {
+      // 관리자 로그인이면 세션 마킹 (이 세션에서만 유효, 창 닫으면 사라짐)
+      if (isAdminEmail) {
+        try { sessionStorage.setItem("ottuki_admin_session", "1"); } catch(e){}
+      }
       // 화면 반영은 onAuthStateChanged(_applyAuthUser)가 처리
       closeAuthModal();
     })
@@ -6817,7 +6855,19 @@ localStorage.removeItem = function(key) {
       cloudLog("연결됨 — 데이터 동기화 시작");
       // 로그인 상태 감시 (새로고침해도 세션 유지, 다른 기기에서도 동일 계정 사용)
       try {
-        firebase.auth().onAuthStateChanged(function(u) { _applyAuthUser(u); });
+        firebase.auth().onAuthStateChanged(function(u) {
+          // 관리자는 자동로그인 금지: 브라우저에 관리자 세션이 남아있으면 즉시 로그아웃
+          // (사용자가 방금 로그인한 경우는 세션 스토리지에 표시가 있어서 통과됨)
+          if (u && (u.email || "").toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+            var justLoggedIn = false;
+            try { justLoggedIn = !!sessionStorage.getItem("ottuki_admin_session"); } catch(e){}
+            if (!justLoggedIn) {
+              firebase.auth().signOut().catch(function(){});
+              return;
+            }
+          }
+          _applyAuthUser(u);
+        });
       } catch(e) { cloudLog("Auth 초기화 실패: " + e.message); }
       cloudPullAll();
       // 방문 기록 (일일 1회, 세션당 1회)
