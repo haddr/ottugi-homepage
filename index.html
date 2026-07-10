@@ -2004,7 +2004,7 @@ html.fs-2 body{zoom:1.16;}
     <div class="form-row">
       <label>사진 / 첨부파일</label>
       <input type="file" id="notice-file-input" multiple onchange="handleNoticeFiles(this)">
-      <div style="font-size:12px;color:#8a96a3;margin-top:6px;">※ 사진은 자동으로 용량이 줄어 여러 장 올릴 수 있습니다. 일반 파일(한글, PDF 등)은 1000KB(약 1MB) 이하만 가능합니다.</div>
+      <div style="font-size:12px;color:#8a96a3;margin-top:6px;">※ 사진은 자동으로 용량이 줄어 여러 장 올릴 수 있습니다. 일반 파일(한글, PDF 등)은 개별 100MB 이하까지 가능합니다.</div>
       <div id="notice-file-list" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;"></div>
     </div>
     <div class="form-actions">
@@ -6122,20 +6122,29 @@ function handleNoticeFiles(input) {
   var files = Array.prototype.slice.call(input.files || []);
   input.value = "";
   files.forEach(function(f) {
+    // 개별 파일 최대 100MB
+    if (f.size > 100 * 1024 * 1024) {
+      alert(f.name + " — 파일이 너무 큽니다. 개별 파일은 100MB 이하만 첨부할 수 있습니다.");
+      return;
+    }
     if (/^image\//.test(f.type)) {
+      // 사진: 자동 압축 (Storage 저장이지만 화면 로딩 속도/저장공간 절약)
       _compressImage(f, function(dataUrl, err) {
         if (err) { alert(f.name + " — " + err); return; }
-        _pendingFiles.push({ fid: _newFid(), name: f.name, size: Math.round(dataUrl.length * 0.75), isImage: true, data: dataUrl });
+        _pendingFiles.push({
+          fid: _newFid(), name: f.name,
+          size: Math.round(dataUrl.length * 0.75),
+          isImage: true, dataUrl: dataUrl, useStorage: true
+        });
         renderPendingFiles();
       });
     } else {
-      if (f.size > 1000 * 1024) { alert(f.name + " — 파일이 너무 큽니다. 일반 파일은 1000KB(약 1MB) 이하만 첨부할 수 있습니다."); return; }
-      var r = new FileReader();
-      r.onload = function() {
-        _pendingFiles.push({ fid: _newFid(), name: f.name, size: f.size, isImage: false, data: r.result });
-        renderPendingFiles();
-      };
-      r.readAsDataURL(f);
+      // 일반 파일: 원본 그대로 Storage에 업로드 (base64 인코딩 안 함)
+      _pendingFiles.push({
+        fid: _newFid(), name: f.name, size: f.size,
+        isImage: false, blob: f, useStorage: true
+      });
+      renderPendingFiles();
     }
   });
 }
@@ -6152,8 +6161,8 @@ function _compressImage(file, cb) {
       c.width = w; c.height = h;
       c.getContext("2d").drawImage(img, 0, 0, w, h);
       var out = c.toDataURL("image/jpeg", 0.78);
-      if (out.length > 1000 * 1024) out = c.toDataURL("image/jpeg", 0.6);
-      if (out.length > 1000 * 1024) { cb(null, "사진 용량이 너무 커서 첨부할 수 없습니다."); return; }
+      if (out.length > 3000 * 1024) out = c.toDataURL("image/jpeg", 0.6);
+      if (out.length > 3000 * 1024) { cb(null, "사진 용량이 너무 커서 첨부할 수 없습니다."); return; }
       cb(out, null);
     };
     img.onerror = function() { cb(null, "이미지를 읽을 수 없습니다."); };
@@ -6166,8 +6175,9 @@ function renderPendingFiles() {
   var box = document.getElementById("notice-file-list");
   if (!box) return;
   box.innerHTML = _pendingFiles.map(function(f, i) {
-    var thumb = (f.isImage && f.data)
-      ? "<img src=\"" + f.data + "\" style=\"width:54px;height:54px;object-fit:cover;border-radius:8px;flex-shrink:0;\">"
+    var previewSrc = f.dataUrl || f.data;
+    var thumb = (f.isImage && previewSrc)
+      ? "<img src=\"" + previewSrc + "\" style=\"width:54px;height:54px;object-fit:cover;border-radius:8px;flex-shrink:0;\">"
       : "<span style=\"font-size:26px;flex-shrink:0;\">📄</span>";
     return "<div style=\"display:flex;align-items:center;gap:8px;background:#f4f7fb;border:1px solid #e3eaf3;border-radius:10px;padding:6px 10px;\">" +
       thumb +
@@ -6180,32 +6190,56 @@ function renderPendingFiles() {
 function removePendingFile(i) { _pendingFiles.splice(i, 1); renderPendingFiles(); }
 
 // 첨부 전체 업로드 (완료 후 done(성공여부) 호출)
+// Firebase Storage에 원본 저장 → downloadURL만 Firestore에 저장 (크기 걱정 없음)
 function _uploadPendingFiles(done) {
-  var toUpload = _pendingFiles.filter(function(f) { return f.data; });
+  var toUpload = _pendingFiles.filter(function(f) { return f.blob || f.dataUrl || f.data; });
   if (toUpload.length === 0) { done(true); return; }
   if (!_cloudReady || !_cloudDb) {
     alert("첨부파일 업로드에는 인터넷 연결이 필요합니다. 연결 상태를 확인해 주세요.");
     done(false); return;
   }
+  if (!_cloudStorage) {
+    alert("파일 저장소가 준비되지 않았습니다. 페이지를 새로고침한 뒤 다시 시도해 주세요.");
+    done(false); return;
+  }
   var remain = toUpload.length, failed = false;
   function step() { remain--; if (remain === 0) done(!failed); }
   toUpload.forEach(function(f) {
-    _cloudDb.collection("files").doc(f.fid).set({
-      name: f.name, size: f.size, isImage: !!f.isImage, data: f.data, ts: Date.now()
-    }).then(function() {
-      _fileCache[f.fid] = f.data;
-      delete f.data; // 업로드 완료된 데이터는 메모리에서 정리
+    // Storage에 업로드할 데이터 결정: 일반 파일은 blob, 사진은 dataUrl
+    var storageRef = _cloudStorage.ref("notice-files/" + f.fid + "_" + encodeURIComponent(f.name));
+    var uploadTask;
+    if (f.blob) {
+      uploadTask = storageRef.put(f.blob);
+    } else if (f.dataUrl) {
+      uploadTask = storageRef.putString(f.dataUrl, "data_url");
+    } else {
+      // 옛 방식 호환 (data 필드)
+      uploadTask = storageRef.putString(f.data, "data_url");
+    }
+    uploadTask.then(function(snap) {
+      return snap.ref.getDownloadURL();
+    }).then(function(url) {
+      f.downloadUrl = url;
+      // 업로드 완료 후 blob/dataUrl은 메모리 해제
+      delete f.blob;
+      delete f.dataUrl;
+      delete f.data;
       step();
-    }, function(e) {
+    }).catch(function(e) {
       failed = true;
-      cloudLog("파일 업로드 실패: " + (e && e.message));
+      cloudLog("파일 업로드 실패(" + f.name + "): " + (e && e.message));
+      alert(f.name + " — 업로드 실패\n" + ((e && e.message) || "알 수 없는 오류"));
       step();
     });
   });
 }
 
-// 파일 데이터 가져오기 (캐시 → Firestore)
-function _getFileData(fid, cb) {
+// 파일 데이터 가져오기 (Storage URL 우선, 없으면 옛 Firestore 캐시)
+function _getFileData(fileRef, cb) {
+  // 새 방식: url 필드가 있으면 Storage 직접 링크
+  if (fileRef && fileRef.url) { cb(fileRef.url); return; }
+  // 옛 방식 호환: Firestore files 컬렉션에서 base64 조회
+  var fid = fileRef && fileRef.fid ? fileRef.fid : fileRef;
   if (_fileCache[fid]) { cb(_fileCache[fid]); return; }
   if (!_cloudReady || !_cloudDb) { cb(null); return; }
   _cloudDb.collection("files").doc(fid).get().then(function(doc) {
@@ -6214,23 +6248,34 @@ function _getFileData(fid, cb) {
   }, function() { cb(null); });
 }
 
-function downloadNoticeFile(fid, name) {
-  _getFileData(fid, function(data) {
+function downloadNoticeFile(fileRefJson, name) {
+  var fileRef;
+  try { fileRef = typeof fileRefJson === "string" ? JSON.parse(fileRefJson) : fileRefJson; } catch(e) { fileRef = fileRefJson; }
+  _getFileData(fileRef, function(data) {
     if (!data) { alert("파일을 불러올 수 없습니다. 인터넷 연결을 확인해 주세요."); return; }
     var a = document.createElement("a");
     a.href = data;
-    a.download = name || "file";
+    a.download = name || (fileRef && fileRef.name) || "file";
+    a.target = "_blank"; // Storage URL은 새 탭에서 열림 방지 위해
     document.body.appendChild(a);
     a.click();
     a.remove();
   });
 }
 
-// 공지 삭제 시 첨부파일 문서도 함께 삭제
+// 공지 삭제 시 첨부파일도 함께 삭제 (Storage + 옛 Firestore 캐시)
 function _deleteNoticeFiles(n) {
   if (!n || !n.files || !n.files.length) return;
   n.files.forEach(function(f) {
     delete _fileCache[f.fid];
+    // Storage 파일 삭제 (새 방식)
+    if (_cloudStorage && f.name) {
+      try {
+        var ref = _cloudStorage.ref("notice-files/" + f.fid + "_" + encodeURIComponent(f.name));
+        ref.delete().catch(function(){}); // 이미 없으면 무시
+      } catch(e) {}
+    }
+    // 옛 Firestore 컬렉션 문서 삭제 (구버전 공지 호환)
     if (_cloudDb) _cloudDb.collection("files").doc(f.fid).delete().catch(function(){});
   });
 }
@@ -6247,7 +6292,7 @@ function addNotice() {
   _uploadPendingFiles(function(ok) {
     if (!ok) { alert("첨부파일 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요."); return; }
     var fileRefs = _pendingFiles.map(function(f) {
-      return { fid: f.fid, name: f.name, size: f.size, isImage: !!f.isImage };
+      return { fid: f.fid, name: f.name, size: f.size, isImage: !!f.isImage, url: f.downloadUrl || null };
     });
     var notices = getNotices();
     notices.push({id: Date.now(), title: title, content: content, date: dateStr, files: fileRefs});
@@ -6290,13 +6335,13 @@ function openNoticeDetail(id) {
         img.style.cssText = "max-width:100%;border-radius:12px;display:block;margin:14px 0;box-shadow:0 2px 10px rgba(0,0,0,.08);";
         img.alt = f.name;
         filesBox.appendChild(img);
-        _getFileData(f.fid, function(data) { if (data) img.src = data; else img.remove(); });
+        _getFileData(f, function(data) { if (data) img.src = data; else img.remove(); });
       } else {
         var b = document.createElement("button");
         b.className = "btn-sm btn-gray";
         b.style.cssText = "display:inline-flex;align-items:center;gap:6px;margin:8px 8px 0 0;font-size:13px;";
         b.innerHTML = "📎 " + esc(f.name) + " <span style=\"color:#8a96a3;font-size:11px;\">(" + _fmtSize(f.size) + ")</span>";
-        (function(fid, name){ b.onclick = function() { downloadNoticeFile(fid, name); }; })(f.fid, f.name);
+        (function(fileRef, name){ b.onclick = function() { downloadNoticeFile(fileRef, name); }; })(f, f.name);
         filesBox.appendChild(b);
       }
     });
@@ -6746,6 +6791,7 @@ var CLOUD_SYNC_KEYS = [
 ];
 
 var _cloudDb = null;
+var _cloudStorage = null;
 var _cloudReady = false;
 var CHUNK_SIZE = 800000; // Firestore 문서 1MB 제한 대비 분할 크기
 
@@ -6756,7 +6802,8 @@ function loadFirebaseSDK(cb) {
   var urls = [
     "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js",
     "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js",
-    "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js",
+    "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"
   ];
   var loaded = 0;
   urls.forEach(function(u) {
@@ -6852,6 +6899,7 @@ localStorage.removeItem = function(key) {
     try {
       firebase.initializeApp(FIREBASE_CONFIG);
       _cloudDb = firebase.firestore();
+      try { _cloudStorage = firebase.storage(); } catch(e) { cloudLog("Storage 초기화 실패: " + e.message); }
       _cloudReady = true;
       cloudLog("연결됨 — 데이터 동기화 시작");
       // 로그인 상태 감시 (새로고침해도 세션 유지, 다른 기기에서도 동일 계정 사용)
