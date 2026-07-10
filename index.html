@@ -5057,11 +5057,24 @@ function removePendingPhoto(idx) {
   renderPendingStrip();
 }
 
+var _gallerySubmitting = false;
 function submitGalleryPost() {
+  if (_gallerySubmitting) return;
   var title = (document.getElementById("gal-title-input").value || "").trim();
   var content = (document.getElementById("gal-content-input").value || "").trim();
   if (!title) { alert("제목을 입력해 주세요."); return; }
   if (_pendingPhotos.length === 0) { alert("사진을 최소 1장 추가해 주세요."); return; }
+
+  _gallerySubmitting = true;
+  var btn = document.querySelector('#page-gallery .btn-submit');
+  var originalText = btn ? btn.textContent : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "등록 중...";
+    btn.style.opacity = "0.6";
+    btn.style.cursor = "not-allowed";
+  }
+
   var posts = getGalleryItems();
   posts.push({ id: Date.now(), title: title, content: content, photos: _pendingPhotos.slice(), date: todayStr() });
   saveGalleryItems(posts);
@@ -5071,6 +5084,14 @@ function submitGalleryPost() {
   renderPendingStrip();
   renderGalleryPage();
   renderHomeGallery();
+
+  _gallerySubmitting = false;
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    btn.style.opacity = "";
+    btn.style.cursor = "";
+  }
   alert("게시물이 등록되었습니다!");
 }
 
@@ -5081,18 +5102,71 @@ function editGalleryPost(id) {
   for (var i = 0; i < posts.length; i++) { if (posts[i].id === id) { post = posts[i]; break; } }
   if (!post) return;
 
-  // 편집 모달 생성 (한 화면에 제목/내용/날짜)
+  // 기존 사진 목록 복사 + 새로 추가할 사진
+  var existingPhotos = (post.photos || []).slice(); // dataURL 배열
+  var newPhotos = [];                                // 새로 추가된 dataURL
+
+  function renderPhotosInModal() {
+    var box = document.getElementById("_gePhotoList");
+    if (!box) return;
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(90px, 1fr));gap:8px;">';
+    existingPhotos.forEach(function(src, i) {
+      html += '<div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#f4f7fb;">'
+        + '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;">'
+        + '<button onclick="window._geRemoveExisting(' + i + ')" title="이 사진 빼기" style="position:absolute;top:4px;right:4px;width:24px;height:24px;border:none;background:rgba(220,38,38,.9);color:#fff;border-radius:50%;cursor:pointer;font-size:14px;font-weight:bold;line-height:1;padding:0;">×</button>'
+        + '</div>';
+    });
+    newPhotos.forEach(function(src, i) {
+      html += '<div style="position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:#f4f7fb;border:2px solid #7dd3fc;">'
+        + '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;">'
+        + '<span style="position:absolute;bottom:2px;left:2px;background:rgba(3,105,161,.9);color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;">신규</span>'
+        + '<button onclick="window._geRemoveNew(' + i + ')" title="취소" style="position:absolute;top:4px;right:4px;width:24px;height:24px;border:none;background:rgba(220,38,38,.9);color:#fff;border-radius:50%;cursor:pointer;font-size:14px;font-weight:bold;line-height:1;padding:0;">×</button>'
+        + '</div>';
+    });
+    html += '</div>';
+    if (existingPhotos.length + newPhotos.length === 0) {
+      html = '<div style="color:#94a3b8;font-size:12px;padding:12px;text-align:center;background:#f8fafc;border-radius:8px;">사진 없음</div>';
+    }
+    box.innerHTML = html;
+  }
+
+  window._geRemoveExisting = function(idx) {
+    if (!confirm("이 사진을 게시물에서 뺄까요?")) return;
+    existingPhotos.splice(idx, 1);
+    renderPhotosInModal();
+  };
+  window._geRemoveNew = function(idx) {
+    newPhotos.splice(idx, 1);
+    renderPhotosInModal();
+  };
+  window._geAddPhoto = function(input) {
+    var files = Array.prototype.slice.call(input.files || []);
+    input.value = "";
+    files.forEach(function(f) {
+      if (!/^image\//.test(f.type)) { alert(f.name + " — 사진 파일만 추가할 수 있습니다."); return; }
+      _compressImage(f, function(dataUrl, err) {
+        if (err) { alert(f.name + " — " + err); return; }
+        newPhotos.push(dataUrl);
+        renderPhotosInModal();
+      });
+    });
+  };
+
+  // 편집 모달 생성
   var overlay = document.createElement("div");
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;";
   overlay.innerHTML =
-    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">'
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:620px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">'
     + '<h3 style="margin:0 0 18px;font-size:18px;">✏️ 게시물 수정</h3>'
     + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">제목</label>'
     + '<input id="_geTitle" type="text" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;">'
     + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">본문 내용</label>'
-    + '<textarea id="_geContent" rows="7" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;font-family:inherit;resize:vertical;"></textarea>'
+    + '<textarea id="_geContent" rows="5" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;font-family:inherit;resize:vertical;"></textarea>'
     + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">날짜</label>'
-    + '<input id="_geDate" type="text" placeholder="예: 2026.07.09" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:20px;box-sizing:border-box;">'
+    + '<input id="_geDate" type="text" placeholder="예: 2026.07.09" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;">'
+    + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">사진 관리</label>'
+    + '<div id="_gePhotoList" style="margin-bottom:10px;"></div>'
+    + '<input type="file" id="_gePhotoInput" accept="image/*" multiple onchange="_geAddPhoto(this)" style="font-size:12px;margin-bottom:20px;">'
     + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
       + '<button id="_geCancel" style="padding:10px 18px;border:1px solid #cbd5e1;background:#fff;color:#475569;border-radius:8px;cursor:pointer;font-weight:600;">취소</button>'
       + '<button id="_geSave" style="padding:10px 22px;border:none;background:#4F8EF7;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;">저장</button>'
@@ -5100,12 +5174,17 @@ function editGalleryPost(id) {
     + '</div>';
   document.body.appendChild(overlay);
 
-  // 기존 값 채우기
   document.getElementById("_geTitle").value = post.title || post.caption || "";
   document.getElementById("_geContent").value = post.content || "";
   document.getElementById("_geDate").value = post.date || "";
+  renderPhotosInModal();
 
-  function close() { overlay.remove(); }
+  function close() {
+    overlay.remove();
+    delete window._geRemoveExisting;
+    delete window._geRemoveNew;
+    delete window._geAddPhoto;
+  }
   document.getElementById("_geCancel").onclick = close;
   overlay.onclick = function(e) { if (e.target === overlay) close(); };
 
@@ -5114,10 +5193,14 @@ function editGalleryPost(id) {
     var c = document.getElementById("_geContent").value;
     var d = document.getElementById("_geDate").value.trim();
     if (!t) { alert("제목을 입력해 주세요."); return; }
+    if (existingPhotos.length + newPhotos.length === 0) {
+      if (!confirm("사진이 하나도 없습니다. 그래도 저장할까요?")) return;
+    }
     post.title = t;
     if ("caption" in post) post.caption = t;
     post.content = c;
     if (d) post.date = d.replace(/-/g, ".");
+    post.photos = existingPhotos.concat(newPhotos);
     saveGalleryItems(posts);
     close();
     openGalleryPost(id);
@@ -6249,6 +6332,13 @@ function _getFileData(fileRef, cb) {
 }
 
 function downloadNoticeFile(fileRefJson, name) {
+  // 로그인 사용자만 다운로드 가능
+  if (!currentUser) {
+    if (confirm("첨부파일은 회원만 다운로드할 수 있습니다.\n로그인하시겠습니까?")) {
+      openAuthModal("login");
+    }
+    return;
+  }
   var fileRef;
   try { fileRef = typeof fileRefJson === "string" ? JSON.parse(fileRefJson) : fileRefJson; } catch(e) { fileRef = fileRefJson; }
   _getFileData(fileRef, function(data) {
@@ -6280,17 +6370,42 @@ function _deleteNoticeFiles(n) {
   });
 }
 
+var _noticeSubmitting = false;
 function addNotice() {
+  if (_noticeSubmitting) return; // 이미 등록 중 → 무시
   var title = (document.getElementById("notice-title-input").value || "").trim();
   var content = (document.getElementById("notice-content-input").value || "").trim();
   var dateVal = (document.getElementById("notice-date-input").value || "").trim();
   if (!title) { alert("제목을 입력해 주세요."); return; }
   if (!content) { alert("내용을 입력해 주세요."); return; }
-  // 날짜 입력 시 YYYY-MM-DD → YYYY.MM.DD 변환, 없으면 오늘
   var dateStr = dateVal ? dateVal.replace(/-/g, ".") : todayStr();
 
+  // 버튼 잠금
+  _noticeSubmitting = true;
+  var btn = document.querySelector('#notice-write-box .btn-submit');
+  var originalText = btn ? btn.textContent : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = _pendingFiles.length > 0 ? "업로드 중..." : "등록 중...";
+    btn.style.opacity = "0.6";
+    btn.style.cursor = "not-allowed";
+  }
+  function unlock() {
+    _noticeSubmitting = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
+      btn.style.opacity = "";
+      btn.style.cursor = "";
+    }
+  }
+
   _uploadPendingFiles(function(ok) {
-    if (!ok) { alert("첨부파일 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요."); return; }
+    if (!ok) {
+      alert("첨부파일 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+      unlock();
+      return;
+    }
     var fileRefs = _pendingFiles.map(function(f) {
       return { fid: f.fid, name: f.name, size: f.size, isImage: !!f.isImage, url: f.downloadUrl || null };
     });
@@ -6304,6 +6419,7 @@ function addNotice() {
     renderPendingFiles();
     renderNoticePage();
     renderHomeNotices();
+    unlock();
     alert("공지사항이 등록되었습니다.");
   });
 }
@@ -6334,13 +6450,23 @@ function openNoticeDetail(id) {
         var img = document.createElement("img");
         img.style.cssText = "max-width:100%;border-radius:12px;display:block;margin:14px 0;box-shadow:0 2px 10px rgba(0,0,0,.08);";
         img.alt = f.name;
-        filesBox.appendChild(img);
-        _getFileData(f, function(data) { if (data) img.src = data; else img.remove(); });
+        if (!currentUser) {
+          // 로그인 안 하면 이미지 자리에 안내 배너
+          var loginBanner = document.createElement("div");
+          loginBanner.style.cssText = "background:#f4f7fb;border:1px dashed #cbd5e1;border-radius:12px;padding:24px;text-align:center;margin:14px 0;color:#64748b;font-size:13px;cursor:pointer;";
+          loginBanner.innerHTML = "🔒 첨부 이미지는 회원만 볼 수 있습니다<br><span style='color:#4F8EF7;font-weight:600;margin-top:6px;display:inline-block;'>로그인하기 →</span>";
+          loginBanner.onclick = function() { openAuthModal("login"); };
+          filesBox.appendChild(loginBanner);
+        } else {
+          filesBox.appendChild(img);
+          _getFileData(f, function(data) { if (data) img.src = data; else img.remove(); });
+        }
       } else {
         var b = document.createElement("button");
         b.className = "btn-sm btn-gray";
         b.style.cssText = "display:inline-flex;align-items:center;gap:6px;margin:8px 8px 0 0;font-size:13px;";
-        b.innerHTML = "📎 " + esc(f.name) + " <span style=\"color:#8a96a3;font-size:11px;\">(" + _fmtSize(f.size) + ")</span>";
+        var lockIcon = currentUser ? "📎" : "🔒";
+        b.innerHTML = lockIcon + " " + esc(f.name) + " <span style=\"color:#8a96a3;font-size:11px;\">(" + _fmtSize(f.size) + ")</span>";
         (function(fileRef, name){ b.onclick = function() { downloadNoticeFile(fileRef, name); }; })(f, f.name);
         filesBox.appendChild(b);
       }
@@ -6415,23 +6541,148 @@ function deleteNoticeFromDetail() {
 }
 
 function editNotice(id) {
+  if (!isAdmin) { alert("관리자만 수정할 수 있습니다."); return; }
   var notices = getNotices();
   var n = null;
   for (var i = 0; i < notices.length; i++) { if (notices[i].id === id) { n = notices[i]; break; } }
   if (!n) return;
-  var newTitle = prompt("제목", n.title);
-  if (newTitle === null) return;
-  var newContent = prompt("내용", n.content);
-  if (newContent === null) return;
-  var newDate = prompt("날짜 (예: 2024.05.07)", n.date);
-  if (newDate === null) return;
-  n.title = newTitle.trim() || n.title;
-  n.content = newContent.trim() || n.content;
-  n.date = (newDate.trim() || n.date).replace(/-/g, ".");
-  saveNotices(notices);
-  renderNoticePage();
-  renderHomeNotices();
-  alert("공지사항이 수정되었습니다.");
+
+  // 편집 상태: 기존 첨부 목록 복사 + 새로 추가할 파일 임시 목록
+  var existingFiles = (n.files || []).map(function(f){ return Object.assign({}, f); });
+  var newPending = []; // 이번 편집에서 새로 추가된 파일들
+
+  function renderFilesInModal() {
+    var box = document.getElementById("_neFileList");
+    if (!box) return;
+    var html = "";
+    // 기존 파일
+    existingFiles.forEach(function(f, i) {
+      html += '<div style="display:flex;align-items:center;gap:8px;background:#f4f7fb;border:1px solid #e3eaf3;border-radius:10px;padding:8px 10px;margin-bottom:6px;">'
+        + '<span style="font-size:22px;flex-shrink:0;">' + (f.isImage ? '🖼️' : '📄') + '</span>'
+        + '<span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(f.name) + ' <span style="color:#8a96a3;font-size:11px;">(' + _fmtSize(f.size) + ')</span></span>'
+        + '<button onclick="window._neRemoveExisting(' + i + ')" style="border:none;background:#fee2e2;color:#dc2626;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">삭제</button>'
+        + '</div>';
+    });
+    // 새로 추가된 파일
+    newPending.forEach(function(f, i) {
+      var previewSrc = f.dataUrl || f.data;
+      var thumb = (f.isImage && previewSrc)
+        ? '<img src="' + previewSrc + '" style="width:24px;height:24px;object-fit:cover;border-radius:4px;flex-shrink:0;">'
+        : '<span style="font-size:22px;flex-shrink:0;">📄</span>';
+      html += '<div style="display:flex;align-items:center;gap:8px;background:#e0f2fe;border:1px solid #7dd3fc;border-radius:10px;padding:8px 10px;margin-bottom:6px;">'
+        + thumb
+        + '<span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">✨ ' + esc(f.name) + ' <span style="color:#0369a1;font-size:11px;">(신규 · ' + _fmtSize(f.size) + ')</span></span>'
+        + '<button onclick="window._neRemoveNew(' + i + ')" style="border:none;background:#fee2e2;color:#dc2626;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;">취소</button>'
+        + '</div>';
+    });
+    if (!html) html = '<div style="color:#94a3b8;font-size:12px;padding:12px;text-align:center;background:#f8fafc;border-radius:8px;">첨부파일 없음</div>';
+    box.innerHTML = html;
+  }
+
+  window._neRemoveExisting = function(idx) {
+    if (!confirm("이 첨부파일을 게시글에서 뺄까요?")) return;
+    existingFiles.splice(idx, 1);
+    renderFilesInModal();
+  };
+  window._neRemoveNew = function(idx) {
+    newPending.splice(idx, 1);
+    renderFilesInModal();
+  };
+  window._neAddFile = function(input) {
+    var files = Array.prototype.slice.call(input.files || []);
+    input.value = "";
+    files.forEach(function(f) {
+      if (f.size > 100 * 1024 * 1024) { alert(f.name + " — 100MB 이하만 가능합니다."); return; }
+      if (/^image\//.test(f.type)) {
+        _compressImage(f, function(dataUrl, err) {
+          if (err) { alert(f.name + " — " + err); return; }
+          newPending.push({ fid: _newFid(), name: f.name, size: Math.round(dataUrl.length * 0.75), isImage: true, dataUrl: dataUrl, useStorage: true });
+          renderFilesInModal();
+        });
+      } else {
+        newPending.push({ fid: _newFid(), name: f.name, size: f.size, isImage: false, blob: f, useStorage: true });
+        renderFilesInModal();
+      }
+    });
+  };
+
+  // 편집 모달 생성
+  var overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:100000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;";
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:14px;padding:24px;max-width:620px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);">'
+    + '<h3 style="margin:0 0 18px;font-size:18px;">✏️ 공지사항 수정</h3>'
+    + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">제목</label>'
+    + '<input id="_neTitle" type="text" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;">'
+    + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">내용</label>'
+    + '<textarea id="_neContent" rows="6" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;font-family:inherit;resize:vertical;"></textarea>'
+    + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">날짜</label>'
+    + '<input id="_neDate" type="text" placeholder="예: 2026.07.10" style="width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;margin-bottom:14px;box-sizing:border-box;">'
+    + '<label style="display:block;font-size:13px;font-weight:600;color:#475569;margin-bottom:6px;">첨부파일</label>'
+    + '<div id="_neFileList" style="margin-bottom:10px;"></div>'
+    + '<input type="file" id="_neFileInput" multiple onchange="_neAddFile(this)" style="font-size:12px;margin-bottom:20px;">'
+    + '<div style="display:flex;gap:10px;justify-content:flex-end;">'
+      + '<button id="_neCancel" style="padding:10px 18px;border:1px solid #cbd5e1;background:#fff;color:#475569;border-radius:8px;cursor:pointer;font-weight:600;">취소</button>'
+      + '<button id="_neSave" style="padding:10px 22px;border:none;background:#4F8EF7;color:#fff;border-radius:8px;cursor:pointer;font-weight:600;">저장</button>'
+    + '</div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+
+  document.getElementById("_neTitle").value = n.title;
+  document.getElementById("_neContent").value = n.content;
+  document.getElementById("_neDate").value = n.date;
+  renderFilesInModal();
+
+  function close() {
+    overlay.remove();
+    delete window._neRemoveExisting;
+    delete window._neRemoveNew;
+    delete window._neAddFile;
+  }
+  document.getElementById("_neCancel").onclick = close;
+  overlay.onclick = function(e) { if (e.target === overlay) close(); };
+
+  document.getElementById("_neSave").onclick = function() {
+    var t = document.getElementById("_neTitle").value.trim();
+    var c = document.getElementById("_neContent").value;
+    var d = document.getElementById("_neDate").value.trim();
+    if (!t) { alert("제목을 입력해 주세요."); return; }
+
+    // 삭제된 파일들: Storage/Firestore에서 정리 (기존 목록에 있었는데 existingFiles에서 빠진 것)
+    var removedFiles = (n.files || []).filter(function(orig) {
+      return !existingFiles.some(function(kept) { return kept.fid === orig.fid; });
+    });
+    _deleteNoticeFiles({ files: removedFiles });
+
+    // 신규 파일 업로드
+    var saveBtn = document.getElementById("_neSave");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "업로드 중...";
+    // 임시로 _pendingFiles 사용해서 기존 업로드 함수 재활용
+    var backup = _pendingFiles;
+    _pendingFiles = newPending;
+    _uploadPendingFiles(function(ok) {
+      _pendingFiles = backup;
+      if (!ok && newPending.length > 0) {
+        alert("일부 신규 파일 업로드에 실패했지만 나머지는 저장합니다.");
+      }
+      // 신규 파일 정보 정리 (downloadUrl 포함된 상태)
+      var uploaded = newPending.filter(function(f) { return f.downloadUrl; }).map(function(f) {
+        return { fid: f.fid, name: f.name, size: f.size, isImage: !!f.isImage, url: f.downloadUrl };
+      });
+      n.title = t;
+      n.content = c;
+      if (d) n.date = d.replace(/-/g, ".");
+      n.files = existingFiles.concat(uploaded);
+      saveNotices(notices);
+      close();
+      renderNoticePage();
+      renderHomeNotices();
+      // 상세뷰 열려 있으면 새로고침
+      if (_currentNoticeId === id) openNoticeDetail(id);
+      alert("공지사항이 수정되었습니다.");
+    });
+  };
 }
 
 function deleteNotice(id) {
@@ -6445,7 +6696,9 @@ function deleteNotice(id) {
   renderHomeNotices();
 }
 
+var _inquirySubmitting = false;
 function addInquiry() {
+  if (_inquirySubmitting) return;
   var name = (document.getElementById("inq-name").value || "").trim();
   var title = (document.getElementById("inq-title").value || "").trim();
   var content = (document.getElementById("inq-content").value || "").trim();
@@ -6455,6 +6708,17 @@ function addInquiry() {
   if (!title) { alert("제목을 입력해 주세요."); return; }
   if (!content) { alert("내용을 입력해 주세요."); return; }
   if (isPrivate && !password) { alert("비밀글은 비밀번호를 입력해 주세요."); return; }
+
+  _inquirySubmitting = true;
+  var btn = document.querySelector('#inquiry-write-box .btn-submit');
+  var originalText = btn ? btn.textContent : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "등록 중...";
+    btn.style.opacity = "0.6";
+    btn.style.cursor = "not-allowed";
+  }
+
   var inquiries = getInquiries();
   inquiries.push({id: Date.now(), name: name, title: title, content: content, date: todayStr(), isPrivate: isPrivate, password: password});
   saveInquiries(inquiries);
@@ -6466,6 +6730,14 @@ function addInquiry() {
   document.getElementById("inq-password-row").style.display = "none";
   closeInqWriteBox();
   renderInquiryPage(1);
+
+  _inquirySubmitting = false;
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    btn.style.opacity = "";
+    btn.style.cursor = "";
+  }
   alert("문의가 등록되었습니다. 담당자가 확인 후 답변 드리겠습니다.");
 }
 
